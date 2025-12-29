@@ -1,0 +1,48 @@
+# Lazarus / Free Pascal
+backup/
+lib/
+*.o
+*.ppu
+*.exe
+*.dll
+*.so
+*.a
+*.lps
+*.compiled
+*.dbg
+ppas.bat
+*.or
+*.rsj
+*.log
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.ap_
+*.dex
+*.class
+
+# Eclipse
+.metadata/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini

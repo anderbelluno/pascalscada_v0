@@ -1,0 +1,45 @@
+unit S7PDU;
+
+{$mode delphi}
+
+interface
+
+uses
+  Classes, SysUtils, S7Types_Siemens, AndroidLog;
+
+function BuildReadVar(Area: TS7Area; DBNum: Word; ByteOffset: LongWord; SizeBytes: Word; TSize: TS7TransportSize): TBytes;
+
+implementation
+
+function BuildReadVar(Area: TS7Area; DBNum: Word; ByteOffset: LongWord; SizeBytes: Word; TSize: TS7TransportSize): TBytes;
+var
+  AreaCode: Byte;
+  TS: Byte;
+  Addr: LongWord;
+begin
+  AreaCode := S7AreaCode(Area);
+  TS := S7TransportSizeCode(TSize);
+
+  // Equivalente ao PascalSCADA: endereço em bits (ByteOffset * 8) para todas as áreas
+  Addr := ByteOffset * 8;
+
+  SetLength(Result, 12);
+
+  Result[0] := $12;  // Syntax ID = S7ANY (equivalente ao PascalSCADA)
+  Result[1] := $0A;  // Length = 10 bytes seguintes
+  Result[2] := $10;  // Transport specifier
+  Result[3] := TS;   // Transport size (ex: $04 para Word/Int, como PascalSCADA)
+  Result[4] := (SizeBytes shr 8) and $FF;  // Length hi
+  Result[5] := SizeBytes and $FF;          // Length lo
+  Result[6] := (DBNum shr 8) and $FF;      // DB hi
+  Result[7] := DBNum and $FF;              // DB lo
+  Result[8] := AreaCode;                   // $84 para DB
+  Result[9] := (Addr shr 16) and $FF;      // Addr byte 2
+  Result[10] := (Addr shr 8) and $FF;      // Addr byte 1
+  Result[11] := Addr and $FF;              // Addr byte 0 (ex: 10 para offset 2)
+
+  AndroidLog.LogD('PLC', 'BuildReadVar: Addr=' + IntToStr(Addr) + ' Bytes=' +
+                  IntToHex(Result[9],2) + ' ' + IntToHex(Result[10],2) + ' ' + IntToHex(Result[11],2));
+end;
+
+end.

@@ -1,0 +1,160 @@
+unit S7Parser;
+
+{$mode delphi}
+
+interface
+
+uses
+  Classes, SysUtils, AndroidLog;
+
+function ParseReadResponseInt16(const Resp: TBytes; out Value: SmallInt): Boolean;
+function ParseReadResponseByte(const Resp: TBytes; out Value: Byte): Boolean;
+function ParseReadResponseWord(const Resp: TBytes; out Value: Word): Boolean;
+function ParseReadResponseDWord(const Resp: TBytes; out Value: LongWord): Boolean;
+function ParseReadResponseDInt(const Resp: TBytes; out Value: LongInt): Boolean;
+function ParseReadResponseReal(const Resp: TBytes; out Value: Single): Boolean;
+function ParseReadResponseBit(const Resp: TBytes; BitIndex: Integer; out Value: Boolean): Boolean;
+
+implementation
+
+function HexStr(const Data: TBytes; MaxBytes: Integer = 64): string;
+var
+  i, n: Integer;
+begin
+  Result := '';
+  n := Length(Data);
+  if n > MaxBytes then n := MaxBytes;
+  for i := 0 to n - 1 do
+    Result := Result + IntToHex(Data[i], 2) + ' ';
+end;
+
+function IsReadResponseOK(const Resp: TBytes): Boolean;
+begin
+  Result := False;
+  if Length(Resp) < 25 then
+  begin
+    AndroidLog.LogD('PLC', 'Resposta muito curta: ' + IntToStr(Length(Resp)) + ' bytes. Esperado >= 25');
+    Exit;
+  end;
+  if Resp[8] <> $03 then
+  begin
+    AndroidLog.LogD('PLC', 'ROSCTR inválido: ' + IntToHex(Resp[8], 2) + ' (esperado 03 Ack_Data)');
+    Exit;
+  end;
+  if (Resp[13] shl 8) or Resp[14] <> 4 then
+  begin
+    AndroidLog.LogD('PLC', 'Parameter length inválido: ' + IntToHex((Resp[13] shl 8) or Resp[14], 4));
+    Exit;
+  end;
+  if Resp[17] <> $FF then
+  begin
+    AndroidLog.LogD('PLC', 'Byte 17 (status) inválido: ' + IntToHex(Resp[17], 2) + ' (esperado FF)');
+    Exit;
+  end;
+  if Resp[18] <> $04 then
+  begin
+    AndroidLog.LogD('PLC', 'Byte 18 (type) inválido: ' + IntToHex(Resp[18], 2) + ' (esperado 04)');
+    Exit;
+  end;
+  Result := True;
+  AndroidLog.LogD('PLC', 'Resposta de leitura OK detectada');
+end;
+
+function GetDataOffset(const Resp: TBytes): Integer;
+begin
+  Result := -1;
+  if not IsReadResponseOK(Resp) then Exit;
+  Result := 21;  // Após FF 04 len_hi len_lo
+  AndroidLog.LogD('PLC', 'Data offset calculado: ' + IntToStr(Result));
+end;
+
+function ParseReadResponseInt16(const Resp: TBytes; out Value: SmallInt): Boolean;
+var
+  Offset: Integer;
+  w: Word;
+begin
+  Result := False;
+  AndroidLog.LogD('PLC', 'Tentando parse Int16 da resposta: ' + HexStr(Resp));
+  Offset := GetDataOffset(Resp);
+  if Offset < 0 then Exit;
+  if Offset + 1 >= Length(Resp) then
+  begin
+    AndroidLog.LogD('PLC', 'Dados insuficientes para Int16');
+    Exit;
+  end;
+  w := (Resp[Offset] shl 8) or Resp[Offset + 1];  // Big-endian, equivalente ao PascalSCADA com SwapBytes=True
+  Value := SmallInt(w);
+  AndroidLog.LogD('PLC', 'Valor Int16 lido com sucesso: ' + IntToStr(Value));
+  Result := True;
+end;
+
+function ParseReadResponseByte(const Resp: TBytes; out Value: Byte): Boolean;
+var
+  Offset: Integer;
+begin
+  Result := False;
+  Offset := GetDataOffset(Resp);
+  if Offset < 0 then Exit;
+  Value := Resp[Offset];
+  Result := True;
+end;
+
+function ParseReadResponseWord(const Resp: TBytes; out Value: Word): Boolean;
+var
+  Offset: Integer;
+begin
+  Result := False;
+  Offset := GetDataOffset(Resp);
+  if (Offset < 0) or (Offset + 1 >= Length(Resp)) then Exit;
+  Value := (Resp[Offset] shl 8) or Resp[Offset + 1];  // Big-endian
+  Result := True;
+end;
+
+function ParseReadResponseDWord(const Resp: TBytes; out Value: LongWord): Boolean;
+var
+  Offset: Integer;
+begin
+  Result := False;
+  Offset := GetDataOffset(Resp);
+  if (Offset < 0) or (Offset + 3 >= Length(Resp)) then Exit;
+  Value := (Resp[Offset] shl 24) or (Resp[Offset + 1] shl 16) or
+           (Resp[Offset + 2] shl 8) or Resp[Offset + 3];  // Big-endian
+  Result := True;
+end;
+
+function ParseReadResponseDInt(const Resp: TBytes; out Value: LongInt): Boolean;
+var
+  u: LongWord;
+begin
+  Result := ParseReadResponseDWord(Resp, u);
+  if Result then Value := LongInt(u);
+end;
+
+function ParseReadResponseReal(const Resp: TBytes; out Value: Single): Boolean;
+var
+  Offset: Integer;
+  u: LongWord;
+  p: ^Single;
+begin
+  Result := False;
+  Offset := GetDataOffset(Resp);
+  if (Offset < 0) or (Offset + 3 >= Length(Resp)) then Exit;
+  u := (Resp[Offset] shl 24) or (Resp[Offset + 1] shl 16) or
+       (Resp[Offset + 2] shl 8) or Resp[Offset + 3];
+  p := @u;
+  Value := p^;
+  Result := True;
+end;
+
+function ParseReadResponseBit(const Resp: TBytes; BitIndex: Integer; out Value: Boolean): Boolean;
+var
+  b: Byte;
+begin
+  Result := False;
+  if not ParseReadResponseByte(Resp, b) then Exit;
+  if (BitIndex < 0) or (BitIndex > 7) then Exit;
+  Value := (b and (1 shl BitIndex)) <> 0;
+  Result := True;
+end;
+
+end.
