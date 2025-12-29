@@ -881,6 +881,8 @@ exports
 
 {%endregion}
   
+{$R *.res}
+
 begin
   gApp:= jApp.Create(nil);
   gApp.Title:= 'LAMW GUI JNI Android Bridges Library';

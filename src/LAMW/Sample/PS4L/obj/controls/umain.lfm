@@ -24,7 +24,7 @@ object AndroidModule1: TAndroidModule1
     MarginBottom = 5
     Enabled = True
     Left = 82
-    Top = 90
+    Top = 133
     Width = 274
     Height = 50
     Visible = True
@@ -40,8 +40,6 @@ object AndroidModule1: TAndroidModule1
     FontSizeUnit = unitDefault
     GravityInParent = lgNone
     OnClick = btnConnectClick
-    Left = 28
-    Top = 28
   end
   object TextView1: jTextView
     MarginLeft = 5
@@ -50,7 +48,7 @@ object AndroidModule1: TAndroidModule1
     MarginBottom = 5
     Enabled = True
     Left = 5
-    Top = 198
+    Top = 241
     Width = 429
     Height = 358
     Visible = True
@@ -63,11 +61,10 @@ object AndroidModule1: TAndroidModule1
     BackgroundColor = colbrDefault
     FontColor = colbrDefault
     FontSize = 0
+    FontFace = ffSans
     TextTypeFace = tfNormal
     FontSizeUnit = unitDefault
     GravityInParent = lgNone
-    Left = 56
-    Top = 56
   end
   object EditText1: jEditText
     MarginLeft = 5
@@ -76,7 +73,7 @@ object AndroidModule1: TAndroidModule1
     MarginBottom = 5
     Enabled = True
     Left = 82
-    Top = 41
+    Top = 84
     Width = 274
     Height = 39
     Visible = True
@@ -103,8 +100,6 @@ object AndroidModule1: TAndroidModule1
     CapSentence = False
     CaptureBackPressed = False
     GravityInParent = lgNone
-    Left = 84
-    Top = 84
   end
   object Panel1: jPanel
     MarginLeft = 0
@@ -113,7 +108,7 @@ object AndroidModule1: TAndroidModule1
     MarginBottom = 0
     Enabled = True
     Left = 82
-    Top = 145
+    Top = 188
     Width = 274
     Height = 48
     Visible = True
@@ -128,8 +123,6 @@ object AndroidModule1: TAndroidModule1
     AnimationDurationIn = 1500
     AnimationDurationOut = 1500
     AnimationMode = animNone
-    Left = 112
-    Top = 112
     object EditText2: jEditText
       MarginLeft = 5
       MarginTop = 5

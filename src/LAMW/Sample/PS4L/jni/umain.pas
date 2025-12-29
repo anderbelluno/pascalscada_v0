@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, AndroidWidget, Laz_And_Controls,
   tcpsocketclient, And_jni, AndroidLog,
-  TCPPort, ISOTCPDriver_Siemens, Tags, S7Types_Siemens;
+  TCPPort, ISOTCPDriver_Siemens, Tags, S7Types_Siemens, PLCString;
 
 type
 
@@ -31,6 +31,8 @@ type
     PortTCP: TPortTCP;
     Driver: TISOTCPDriver;
     ReadNumber: TPLCTagNumber;
+    ReadText: TPLCString;
+    ReadBit: TTagBit;
     FS7Ready: Boolean;
     PiscaPisca: Integer;
   end;
@@ -63,7 +65,9 @@ end;
 
 procedure TAndroidModule1.AndroidModule1Destroy(Sender: TObject);
 begin
-    if Assigned(ReadNumber) then ReadNumber.Free;
+  if Assigned(ReadBit) then ReadBit.Free;
+  if Assigned(ReadNumber) then ReadNumber.Free;
+  if Assigned(ReadText) then ReadText.Free;
   if Assigned(Driver) then Driver.Free;
   if Assigned(PortTCP) then PortTCP.Free;
 end;
@@ -94,13 +98,30 @@ begin
 
     ReadNumber := TPLCTagNumber.Create(Self);
     ReadNumber.Connection(Driver)
-              .SetScanInterval(1000)
+              .SetScanInterval(1100)
               .SetAutoRead(True)
               .SetMemReadFunction(4)  // DB
               .SetMemFileDB(1)        // DB1
               .SetMemAddress(2)       // Offset 2
               .SetKind(pttSmallInt);  // Equivalente ao PascalSCADA para Int
     ReadNumber.OnValueChange := OnTagUpdated;
+
+    ReadText := TPLCString.Create(Self);
+    ReadText.Connection(Driver)
+             .SetScanInterval(900)
+             .SetAutoRead(True)
+             .SetMemReadFunction(4)
+             .SetDB(1, 4, 52);
+    ReadText.OnValueChange := OnTagUpdated;
+
+    ReadBit := TTagBit.Create(Self);
+    ReadBit.Connection(Driver)
+           .SetScanInterval(1200)
+           .SetAutoRead(True)
+           .SetMemReadFunction(4)
+           .SetDB(1, 56);
+    ReadBit.SetBit(0);
+    ReadBit.OnValueChange := OnTagUpdated;
 
     Driver.Connect;
   end

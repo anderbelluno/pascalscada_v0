@@ -8,15 +8,24 @@ uses
   Classes, SysUtils, AndroidWidget, Laz_And_Controls, TCPPort, S7Transport, AndroidLog;
 
 type
+  THandlerItem = class
+    Handler: TS7FrameReceived;
+  end;
+
   TISOTCPDriver = class(TComponent)
   private
     FPort: TPortTCP;
     FOnFrame: TS7FrameReceived;
     FOnS7Connected: TNotifyEvent;
+    FFrameListeners: array of TS7FrameReceived;
+    FRequestQueue: TList;
+    FNextHandler: TS7FrameReceived;
     procedure PortOnFrame(Sender: TObject; const Frame: TBytes);
     procedure SetOnS7Connected(Value: TNotifyEvent);
+    function SameListener(a, b: TS7FrameReceived): Boolean;
   public
     constructor Create(AOwner: TComponent; APort: TPortTCP); reintroduce;
+    destructor Destroy; override;
     function SetHost(const AHost: string): TISOTCPDriver;
     function SetPort(const APortNum: Integer): TISOTCPDriver;
     function SetRack(const ARack: Integer): TISOTCPDriver;
@@ -24,9 +33,13 @@ type
     function Connect: TISOTCPDriver;
     function Disconnect: TISOTCPDriver;
     procedure StartHandshake;
-    procedure SendPDU(const Data: TBytes);
+    procedure SendPDU(const Data: TBytes); overload;
+    procedure SendPDU(const Data: TBytes; Handler: TS7FrameReceived); overload;
     property OnFrameReceived: TS7FrameReceived read FOnFrame write FOnFrame;
     property OnS7Connected: TNotifyEvent read FOnS7Connected write SetOnS7Connected;
+    function AddFrameListener(L: TS7FrameReceived): TISOTCPDriver;
+    function RemoveFrameListener(L: TS7FrameReceived): TISOTCPDriver;
+    function SetActiveHandler(L: TS7FrameReceived): TISOTCPDriver;
   end;
 
 implementation
@@ -36,6 +49,20 @@ begin
   inherited Create(AOwner);
   FPort := APort;
   FPort.OnFrameReceived := PortOnFrame;
+  FRequestQueue := TList.Create;
+end;
+
+destructor TISOTCPDriver.Destroy;
+var
+  i: Integer;
+begin
+  if Assigned(FRequestQueue) then
+  begin
+    for i := 0 to FRequestQueue.Count - 1 do
+      TObject(FRequestQueue[i]).Free;
+    FRequestQueue.Free;
+  end;
+  inherited Destroy;
 end;
 
 function TISOTCPDriver.SetHost(const AHost: string): TISOTCPDriver;
@@ -81,10 +108,24 @@ begin
 end;
 
 procedure TISOTCPDriver.SendPDU(const Data: TBytes);
+begin
+  SendPDU(Data, FNextHandler);
+  FNextHandler := nil;
+end;
+
+procedure TISOTCPDriver.SendPDU(const Data: TBytes; Handler: TS7FrameReceived);
 var
   FullPDU: TBytes;
   Len, ParamLen: Integer;
+  Item: THandlerItem;
 begin
+  if Assigned(Handler) then
+  begin
+    Item := THandlerItem.Create;
+    Item.Handler := Handler;
+    FRequestQueue.Add(Item);
+  end;
+
   ParamLen := Length(Data);
   // TPKT(4) + COTP(3) + S7Header(10) + Param
   Len := 4 + 3 + 10 + ParamLen;
@@ -123,15 +164,75 @@ begin
 end;
 
 procedure TISOTCPDriver.PortOnFrame(Sender: TObject; const Frame: TBytes);
+var
+  FullPDU: TBytes;
+  i: Integer;
+  Item: THandlerItem;
 begin
-  //AppLog('PLC', 'Driver.PortOnFrame len=' + IntToStr(Length(Frame)));
-  if Assigned(FOnFrame) then FOnFrame(Self, Frame);
+  if FRequestQueue.Count > 0 then
+  begin
+    Item := THandlerItem(FRequestQueue[0]);
+    if Assigned(Item.Handler) then
+      Item.Handler(Self, Frame);
+    FRequestQueue.Delete(0);
+    Item.Free;
+  end
+  else if Assigned(FOnFrame) then
+    FOnFrame(Self, Frame);
+
+  if Length(FFrameListeners) > 0 then
+  begin
+    for i := 0 to High(FFrameListeners) do
+      if Assigned(FFrameListeners[i]) then FFrameListeners[i](Self, Frame);
+  end;
 end;
 
 procedure TISOTCPDriver.SetOnS7Connected(Value: TNotifyEvent);
 begin
   FOnS7Connected := Value;
   FPort.OnS7Connected := Value;
+end;
+
+function TISOTCPDriver.SameListener(a, b: TS7FrameReceived): Boolean;
+var
+  ma, mb: TMethod;
+begin
+  ma := TMethod(a);
+  mb := TMethod(b);
+  Result := (ma.Code = mb.Code) and (ma.Data = mb.Data);
+end;
+
+function TISOTCPDriver.AddFrameListener(L: TS7FrameReceived): TISOTCPDriver;
+var
+  i: Integer;
+begin
+  for i := 0 to High(FFrameListeners) do
+    if SameListener(FFrameListeners[i], L) then Exit(Self);
+  i := Length(FFrameListeners);
+  SetLength(FFrameListeners, i + 1);
+  FFrameListeners[i] := L;
+  Result := Self;
+end;
+
+function TISOTCPDriver.RemoveFrameListener(L: TS7FrameReceived): TISOTCPDriver;
+var
+  i, j: Integer;
+begin
+  for i := 0 to High(FFrameListeners) do
+    if SameListener(FFrameListeners[i], L) then
+    begin
+      for j := i to High(FFrameListeners) - 1 do
+        FFrameListeners[j] := FFrameListeners[j + 1];
+      SetLength(FFrameListeners, Length(FFrameListeners) - 1);
+      Break;
+    end;
+  Result := Self;
+end;
+
+function TISOTCPDriver.SetActiveHandler(L: TS7FrameReceived): TISOTCPDriver;
+begin
+  FNextHandler := L;
+  Result := Self;
 end;
 
 end.

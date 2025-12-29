@@ -138,7 +138,6 @@ end;
 function TPLCTagNumber.Connection(Drv: TISOTCPDriver): TPLCTagNumber;
 begin
   FDriver := Drv;
-  FDriver.OnFrameReceived := DriverOnFrame;
   Result := Self;
 end;
 
@@ -324,7 +323,7 @@ var
 begin
   LogD('PLC', 'Tag.Read area=' + IntToStr(Ord(FArea)) + ' DB=' + IntToStr(FDB) + ' Off=' + IntToStr(FOffset) + ' Size=' + IntToStr(FSize));
   pdu := S7PDU.BuildReadVar(FArea, FDB, FOffset, FSize, FTS);
-  FDriver.SendPDU(pdu);
+  FDriver.SendPDU(pdu, DriverOnFrame);
 end;
 
 procedure TPLCTagNumber.DriverOnFrame(Sender: TObject; const Frame: TBytes);
@@ -529,6 +528,217 @@ end;
 procedure TPLCTagNumber.InternalTimer(Sender: TObject);
 begin
   Read;
+end;
+
+type
+  TPLCTagString = class(TComponent)
+  private
+    FDriver: TISOTCPDriver;
+    FArea: TS7Area;
+    FDB: Word;
+    FOffset: LongWord;
+    FSize: Word;
+    FOnValueChange: TOnValueChange;
+    FScanInterval: Integer;
+    FTimer: jTimer;
+    FMemReadFunction: Integer;
+    FAutoRead: Boolean;
+    FLastValue: string;
+    FValueValid: Boolean;
+    procedure InternalTimer(Sender: TObject);
+    procedure EnsureTimer;
+    procedure KillTimer;
+    procedure InvalidateValue;
+    function GetScanInterval: Integer;
+    function GetDataBytes(const Frame: TBytes): TBytes;
+    procedure DriverOnFrame(Sender: TObject; const Frame: TBytes);
+  public
+    constructor Create(AOwner: TComponent); override;
+    function Connection(Drv: TISOTCPDriver): TPLCTagString;
+    function SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCTagString;
+    function SetArea(AArea: TS7Area): TPLCTagString;
+    function SetScanInterval(Value: Integer): TPLCTagString;
+    function SetAutoRead(Value: Boolean): TPLCTagString;
+    function SetMemReadFunction(Func: Integer): TPLCTagString;
+    function SetMemFileDB(DB: Word): TPLCTagString;
+    function SetMemAddress(Offset: LongWord): TPLCTagString;
+    procedure Read;
+    property OnValueChange: TOnValueChange read FOnValueChange write FOnValueChange;
+    property ScanInterval: Integer read GetScanInterval write FScanInterval;
+    property AutoRead: Boolean read FAutoRead write FAutoRead;
+  end;
+
+constructor TPLCTagString.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FValueValid := False;
+  FLastValue := '';
+end;
+
+procedure TPLCTagString.InvalidateValue;
+begin
+  FValueValid := False;
+  FLastValue := '';
+end;
+
+function TPLCTagString.Connection(Drv: TISOTCPDriver): TPLCTagString;
+begin
+  FDriver := Drv;
+  FDriver.AddFrameListener(DriverOnFrame);
+  Result := Self;
+end;
+
+function TPLCTagString.SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCTagString;
+begin
+  InvalidateValue;
+  FDB := ADB;
+  FOffset := AOffset;
+  FSize := ASize;
+  Result := Self;
+end;
+
+function TPLCTagString.SetArea(AArea: TS7Area): TPLCTagString;
+begin
+  InvalidateValue;
+  FArea := AArea;
+  Result := Self;
+end;
+
+function TPLCTagString.SetScanInterval(Value: Integer): TPLCTagString;
+begin
+  FScanInterval := Value;
+  if (FScanInterval <= 0) or (not FAutoRead) then
+    KillTimer
+  else
+    EnsureTimer;
+  Result := Self;
+end;
+
+function TPLCTagString.SetAutoRead(Value: Boolean): TPLCTagString;
+begin
+  if FAutoRead <> Value then
+  begin
+    FAutoRead := Value;
+    if FAutoRead then
+      EnsureTimer
+    else
+      KillTimer;
+  end;
+  Result := Self;
+end;
+
+function TPLCTagString.SetMemReadFunction(Func: Integer): TPLCTagString;
+begin
+  FMemReadFunction := Func;
+  case Func of
+    1: SetArea(saInputs);
+    2: SetArea(saOutputs);
+    3: SetArea(saFlags);
+    4: SetArea(saDB);
+    5: SetArea(saCounters);
+    6: SetArea(saTimers);
+  else
+    SetArea(saDB);
+  end;
+  Result := Self;
+end;
+
+function TPLCTagString.SetMemFileDB(DB: Word): TPLCTagString;
+begin
+  InvalidateValue;
+  FDB := DB;
+  Result := Self;
+end;
+
+function TPLCTagString.SetMemAddress(Offset: LongWord): TPLCTagString;
+begin
+  InvalidateValue;
+  FOffset := Offset;
+  Result := Self;
+end;
+
+procedure TPLCTagString.InternalTimer(Sender: TObject);
+begin
+  Read;
+end;
+
+procedure TPLCTagString.EnsureTimer;
+begin
+  if not FAutoRead then Exit;
+  if (FTimer = nil) and (FScanInterval > 0) then
+  begin
+    if Owner <> nil then
+      FTimer := jTimer.Create(Owner)
+    else
+      FTimer := jTimer.Create(nil);
+    FTimer.Init;
+    FTimer.Interval := FScanInterval;
+    FTimer.OnTimer := InternalTimer;
+    FTimer.Enabled := True;
+  end
+  else if (FTimer <> nil) then
+  begin
+    FTimer.Interval := FScanInterval;
+    FTimer.Enabled := FScanInterval > 0;
+  end;
+end;
+
+procedure TPLCTagString.KillTimer;
+begin
+  if FTimer <> nil then
+  begin
+    FTimer.Enabled := False;
+    FreeAndNil(FTimer);
+  end;
+end;
+
+function TPLCTagString.GetScanInterval: Integer;
+begin
+  Result := FScanInterval;
+end;
+
+function TPLCTagString.GetDataBytes(const Frame: TBytes): TBytes;
+var
+  i, Offset: Integer;
+begin
+  SetLength(Result, FSize);
+  Offset := 25;
+  for i := 0 to FSize - 1 do
+    if (Offset + i) < Length(Frame) then
+      Result[i] := Frame[Offset + i]
+    else
+      Result[i] := 0;
+end;
+
+procedure TPLCTagString.Read;
+var
+  pdu: TBytes;
+begin
+  pdu := S7PDU.BuildReadVar(FArea, FDB, FOffset, FSize, tsByte);
+  FDriver.SendPDU(pdu);
+end;
+
+procedure TPLCTagString.DriverOnFrame(Sender: TObject; const Frame: TBytes);
+var
+  data: TBytes;
+  st: Integer;
+  ValStr: string;
+  i: Integer;
+begin
+  if not S7Parser.IsReadResponseOK(Frame) then Exit;
+  data := GetDataBytes(Frame);
+  if Length(data) < 2 then Exit;
+  st := data[1];
+  if st > Length(data) - 2 then st := Length(data) - 2;
+  ValStr := '';
+  for i := 0 to st - 1 do
+    ValStr := ValStr + Chr(data[2 + i]);
+  if (not FValueValid) or (ValStr <> FLastValue) then
+  begin
+    FValueValid := True;
+    FLastValue := ValStr;
+    if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+  end;
 end;
 
 procedure TPLCTagNumber.EnsureTimer;
