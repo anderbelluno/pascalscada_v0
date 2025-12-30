@@ -68,25 +68,25 @@ end;
 function TISOTCPDriver.SetHost(const AHost: string): TISOTCPDriver;
 begin
   FPort.Host := AHost;
-  Result := Self;
+  Result     := Self;
 end;
 
 function TISOTCPDriver.SetPort(const APortNum: Integer): TISOTCPDriver;
 begin
   FPort.Port := APortNum;
-  Result := Self;
+  Result     := Self;
 end;
 
 function TISOTCPDriver.SetRack(const ARack: Integer): TISOTCPDriver;
 begin
   FPort.Rack := ARack;
-  Result := Self;
+  Result     := Self;
 end;
 
 function TISOTCPDriver.SetSlot(const ASlot: Integer): TISOTCPDriver;
 begin
   FPort.Slot := ASlot;
-  Result := Self;
+  Result     := Self;
 end;
 
 function TISOTCPDriver.Connect: TISOTCPDriver;
@@ -177,13 +177,15 @@ begin
     FRequestQueue.Delete(0);
     Item.Free;
   end
-  else if Assigned(FOnFrame) then
+  else
+  if Assigned(FOnFrame) then
     FOnFrame(Self, Frame);
 
   if Length(FFrameListeners) > 0 then
   begin
     for i := 0 to High(FFrameListeners) do
-      if Assigned(FFrameListeners[i]) then FFrameListeners[i](Self, Frame);
+      if Assigned(FFrameListeners[i]) then
+        FFrameListeners[i](Self, Frame);
   end;
 end;
 
@@ -207,7 +209,8 @@ var
   i: Integer;
 begin
   for i := 0 to High(FFrameListeners) do
-    if SameListener(FFrameListeners[i], L) then Exit(Self);
+    if SameListener(FFrameListeners[i], L) then
+      Exit(Self);
   i := Length(FFrameListeners);
   SetLength(FFrameListeners, i + 1);
   FFrameListeners[i] := L;

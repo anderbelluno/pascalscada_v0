@@ -50,7 +50,8 @@ var
 begin
   Result := '';
   n := Length(Data);
-  if n > MaxBytes then n := MaxBytes;
+  if n > MaxBytes then
+    n := MaxBytes;
   for i := 0 to n - 1 do
     Result := Result + IntToHex(Data[i], 2) + ' ';
 end;
@@ -91,7 +92,8 @@ end;
 
 procedure TS7Transport.OnConnected(Sender: TObject);
 begin
-  if Assigned(FPrevOnConnected) then FPrevOnConnected(Sender);
+  if Assigned(FPrevOnConnected) then
+    FPrevOnConnected(Sender);
 end;
 
 procedure TS7Transport.StartHandshake;
@@ -101,29 +103,41 @@ var
   i: Integer;
 begin
   // TPKT + COTP Connection Request (with TSAPs)
-  cr[0] := $03; cr[1] := $00; cr[2] := $00; cr[3] := $16; // TPKT len=22
+  cr[0] := $03;
+  cr[1] := $00;
+  cr[2] := $00;
+  cr[3] := $16; // TPKT len=22
   cr[4] := $11; // LI (Length of COTP header)
   cr[5] := $E0; // COTP: CR (Connection Request)
-  cr[6] := $00; cr[7] := $00; // DST-REF (0)
-  cr[8] := $00; cr[9] := $00; // SRC-REF (0)
+  cr[6] := $00;
+  cr[7] := $00; // DST-REF (0)
+  cr[8] := $00;
+  cr[9] := $00; // SRC-REF (0)
   cr[10] := $00; // Class 0
   
   // Parameters
   // TPDU Size (C0)
-  cr[11] := $C0; cr[12] := $01; cr[13] := $0A; // Size 1024 (0x0A)
+  cr[11] := $C0;
+  cr[12] := $01;
+  cr[13] := $0A; // Size 1024 (0x0A)
   
   // Src TSAP (C1)
-  cr[14] := $C1; cr[15] := $02; 
+  cr[14] := $C1;
+  cr[15] := $02;
   cr[16] := (FSrcTSAP shr 8) and $FF; 
   cr[17] := FSrcTSAP and $FF;
   
   // Dst TSAP (C2)
-  cr[18] := $C2; cr[19] := $02; 
+  cr[18] := $C2;
+  cr[19] := $02;
   cr[20] := (FDstTSAP shr 8) and $FF; 
   cr[21] := FDstTSAP and $FF;
 
   SetLength(dyn, Length(cr));
-  for i := 0 to High(cr) do dyn[i] := cr[i];
+
+  for i := 0 to High(cr) do
+    dyn[i] := cr[i];
+
   AppLog('PLC', 'StartHandshake: Send CR SrcTSAP=' + IntToHex(FSrcTSAP, 4) + ' DstTSAP=' + IntToHex(FDstTSAP, 4));
   FSocket.SendBytes(dyn, False);
 end;
@@ -160,7 +174,8 @@ begin
   while True do
   begin
     L := Length(FBuffer);
-    if L < 4 then Exit;
+    if L < 4 then
+      Exit;
     
     // Check TPKT Version (must be 0x03)
     if FBuffer[0] <> $03 then
@@ -235,16 +250,19 @@ begin
           else
              AppLog('PLC', 'OnS7Connected is nil or already fired');
              
-          if Assigned(FOnFrameReceived) then FOnFrameReceived(Self, Frame);
+          if Assigned(FOnFrameReceived) then
+            FOnFrameReceived(Self, Frame);
        end
        else
        begin
           AppLog('PLC', 'Frame[7] is not 0x32 (S7 Protocol ID). Value=' + IntToHex(Frame[7], 2));
-          if Assigned(FOnFrameReceived) then FOnFrameReceived(Self, Frame);
+          if Assigned(FOnFrameReceived) then
+            FOnFrameReceived(Self, Frame);
        end;
     end
     else
-      if Assigned(FOnFrameReceived) then FOnFrameReceived(Self, Frame);
+      if Assigned(FOnFrameReceived) then
+        FOnFrameReceived(Self, Frame);
   end;
 end;
 
@@ -255,7 +273,8 @@ var
 begin
   AppLog('PLC', 'TX ' + IntToStr(Length(Data)) + ' bytes ' + HexStr(Data, 32));
   SetLength(dyn, Length(Data));
-  for i := 0 to High(Data) do dyn[i] := Data[i];
+  for i := 0 to High(Data) do
+      dyn[i] := Data[i];
   FSocket.SendBytes(dyn, False);
 end;
 
@@ -280,8 +299,10 @@ begin
   s7[3] := $00; // Reserved
   s7[4] := $00; // PDU Ref (Hi)
   s7[5] := $01; // PDU Ref (Lo)
-  s7[6] := $00; s7[7] := $08; // Parameter length = 8
-  s7[8] := $00; s7[9] := $00; // Data length = 0
+  s7[6] := $00;
+  s7[7] := $08; // Parameter length = 8
+  s7[8] := $00;
+  s7[9] := $00; // Data length = 0
   // Parameters
   s7[10] := $F0; // Function: Setup Communication
   s7[11] := $00; // Reserved
@@ -296,18 +317,25 @@ begin
   totalLen := 4 + 3 + Length(s7);
   SetLength(pkt, totalLen);
   // TPKT
-  pkt[0] := $03; pkt[1] := $00; pkt[2] := (totalLen shr 8) and $FF; pkt[3] := totalLen and $FF;
+  pkt[0] := $03;
+  pkt[1] := $00;
+  pkt[2] := (totalLen shr 8) and $FF;
+  pkt[3] := totalLen and $FF;
   // COTP DT
   // LI = 2 (byte after LI + byte after that)
   // PDU Type = F0 (DT Data)
   // TPDU number + EOT (80 = EOT)
-  pkt[4] := $02; pkt[5] := $F0; pkt[6] := $80;
+  pkt[4] := $02;
+  pkt[5] := $F0;
+  pkt[6] := $80;
   // S7
-  for i := 0 to High(s7) do pkt[7+i] := s7[i];
+  for i := 0 to High(s7) do
+    pkt[7+i] := s7[i];
 
   AppLog('PLC', 'Send Setup Communication');
   SetLength(dyn, Length(pkt));
-  for i := 0 to High(pkt) do dyn[i] := pkt[i];
+  for i := 0 to High(pkt) do
+    dyn[i] := pkt[i];
   FSocket.SendBytes(dyn, False);
 end;
 

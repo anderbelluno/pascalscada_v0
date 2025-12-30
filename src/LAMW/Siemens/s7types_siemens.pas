@@ -16,12 +16,12 @@ implementation
 function S7AreaCode(Area: TS7Area): Byte;
 begin
   case Area of
-    saMarker : Result := $83;
-    saDB : Result := $84;
-    saInputs : Result := $81;
-    saOutputs : Result := $82;
-    saFlags : Result := $83;
-    saTimers : Result := $1D;
+    saMarker   : Result := $83;
+    saDB       : Result := $84;
+    saInputs   : Result := $81;
+    saOutputs  : Result := $82;
+    saFlags    : Result := $83;
+    saTimers   : Result := $1D;
     saCounters : Result := $1C;
   else
     Result := $84;

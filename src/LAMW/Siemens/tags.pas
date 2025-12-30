@@ -125,29 +125,29 @@ constructor TPLCTagNumber.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FValueValid := False;
-  FLastValue := '';
+  FLastValue  := '';
 end;
 
 procedure TPLCTagNumber.InvalidateValue;
 begin
   FValueValid := False;
-  FLastValue := '';
+  FLastValue  := '';
 end;
 
 
 function TPLCTagNumber.Connection(Drv: TISOTCPDriver): TPLCTagNumber;
 begin
   FDriver := Drv;
-  Result := Self;
+  Result  := Self;
 end;
 
 function TPLCTagNumber.SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCTagNumber;
 begin
   InvalidateValue;
-  FDB := ADB;
+  FDB     := ADB;
   FOffset := AOffset;
-  FSize := ASize;
-  Result := Self;
+  FSize   := ASize;
+  Result  := Self;
 end;
 
 function TPLCTagNumber.SetDB(ADB: Word; AOffset: LongWord): TPLCTagNumber;
@@ -169,7 +169,7 @@ end;
 function TPLCTagNumber.SetArea(AArea: TS7Area): TPLCTagNumber;
 begin
   InvalidateValue;
-  FArea := AArea;
+  FArea  := AArea;
   Result := Self;
 end;
 
@@ -184,7 +184,7 @@ end;
 function TPLCTagNumber.SetTransportSize(ATS: TS7TransportSize): TPLCTagNumber;
 begin
   InvalidateValue;
-  FTS := ATS;
+  FTS    := ATS;
   Result := Self;
 end;
 
@@ -342,11 +342,13 @@ var
   st: Integer;
   ValStr: string;
 begin
-  st := 0; if Length(Frame) > 13 then st := Frame[13];
+  st := 0; if Length(Frame) > 13 then
+    st := Frame[13];
   LogD('PLC', 'DriverOnFrame status=' + IntToStr(st) + ' len=' + IntToStr(Length(Frame)));
   
   // Analyze frame for errors. If not a valid Read Response (e.g. Setup Confirm), exit.
-  if not S7Parser.IsReadResponseOK(Frame) then Exit;
+  if not S7Parser.IsReadResponseOK(Frame) then
+    Exit;
   
   ValStr := '';
   
@@ -355,13 +357,18 @@ begin
       begin
         if S7Parser.ParseReadResponseBit(Frame, FBitIndex, bo) then
         begin
-          if bo then ValStr := 'True' else ValStr := 'False';
+          if bo then
+            ValStr := 'True'
+          else
+            ValStr := 'False';
           if (not FValueValid) or (ValStr <> FLastValue) then
           begin
             FValueValid := True;
-            FLastValue := ValStr;
-            if Assigned(FOnValueBool) then FOnValueBool(Self, bo);
-            if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+            FLastValue  := ValStr;
+            if Assigned(FOnValueBool) then
+              FOnValueBool(Self, bo);
+            if Assigned(FOnValueChange) then
+              FOnValueChange(Self, ValStr);
           end;
         end;
       end;
@@ -374,90 +381,110 @@ begin
           begin
             FValueValid := True;
             FLastValue := ValStr;
-            if Assigned(FOnValueByte) then FOnValueByte(Self, b);
-            if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+            if Assigned(FOnValueByte) then
+              FOnValueByte(Self, b);
+            if Assigned(FOnValueChange) then
+              FOnValueChange(Self, ValStr);
           end;
         end;
       end;
     pttShortInt:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         ValStr := IntToStr(ShortInt(data[0]));
         if (not FValueValid) or (ValStr <> FLastValue) then
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttWord:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         w := (data[0] shl 8) or data[1];
         ValStr := IntToStr(w);
         if (not FValueValid) or (ValStr <> FLastValue) then
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueWord) then FOnValueWord(Self, w);
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueWord) then
+            FOnValueWord(Self, w);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttSmallInt:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         i16 := SmallInt((data[0] shl 8) or data[1]);
         ValStr := IntToStr(i16);
         if (not FValueValid) or (ValStr <> FLastValue) then
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueInt16) then FOnValueInt16(Self, i16);
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueInt16) then
+            FOnValueInt16(Self, i16);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttDWord:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         dw := (data[0] shl 24) or (data[1] shl 16) or (data[2] shl 8) or data[3];
         ValStr := IntToStr(Integer(dw));
         if (not FValueValid) or (ValStr <> FLastValue) then
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueDWord) then FOnValueDWord(Self, dw);
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueDWord) then
+            FOnValueDWord(Self, dw);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttInt:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         i16 := SmallInt((data[0] shl 8) or data[1]);
         ValStr := IntToStr(i16);
         if (not FValueValid) or (ValStr <> FLastValue) then
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueInt16) then FOnValueInt16(Self, i16);
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueInt16) then
+            FOnValueInt16(Self, i16);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttDInt:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         di := LongInt((data[0] shl 24) or (data[1] shl 16) or (data[2] shl 8) or data[3]);
         ValStr := IntToStr(di);
         if (not FValueValid) or (ValStr <> FLastValue) then
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueDInt) then FOnValueDInt(Self, di);
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueDInt) then
+            FOnValueDInt(Self, di);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttFloat:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         dw := (data[0] shl 24) or (data[1] shl 16) or (data[2] shl 8) or data[3];
         r := PSingle(@dw)^;
         ValStr := FloatToStr(r);
@@ -465,25 +492,30 @@ begin
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueReal) then FOnValueReal(Self, r);
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueReal) then
+            FOnValueReal(Self, r);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttLongInt:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         di := LongInt((data[0] shl 24) or (data[1] shl 16) or (data[2] shl 8) or data[3]);
         ValStr := IntToStr(di);
         if (not FValueValid) or (ValStr <> FLastValue) then
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttInt64:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         u64 := (QWord(data[0]) shl 56) or (QWord(data[1]) shl 48) or (QWord(data[2]) shl 40) or (QWord(data[3]) shl 32) or
                (QWord(data[4]) shl 24) or (QWord(data[5]) shl 16) or (QWord(data[6]) shl 8) or QWord(data[7]);
         i64 := Int64(u64);
@@ -492,12 +524,14 @@ begin
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttQWord:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         u64 := (QWord(data[0]) shl 56) or (QWord(data[1]) shl 48) or (QWord(data[2]) shl 40) or (QWord(data[3]) shl 32) or
                (QWord(data[4]) shl 24) or (QWord(data[5]) shl 16) or (QWord(data[6]) shl 8) or QWord(data[7]);
         ValStr := IntToStr(u64);
@@ -505,12 +539,14 @@ begin
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
     pttDouble:
       begin
-        data := GetDataBytes(Frame); ApplySwaps(data);
+        data := GetDataBytes(Frame);
+        ApplySwaps(data);
         u64 := (QWord(data[0]) shl 56) or (QWord(data[1]) shl 48) or (QWord(data[2]) shl 40) or (QWord(data[3]) shl 32) or
                (QWord(data[4]) shl 24) or (QWord(data[5]) shl 16) or (QWord(data[6]) shl 8) or QWord(data[7]);
         d8 := PDouble(@u64)^;
@@ -519,7 +555,8 @@ begin
         begin
           FValueValid := True;
           FLastValue := ValStr;
-          if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+          if Assigned(FOnValueChange) then
+            FOnValueChange(Self, ValStr);
         end;
       end;
   end;
@@ -528,217 +565,6 @@ end;
 procedure TPLCTagNumber.InternalTimer(Sender: TObject);
 begin
   Read;
-end;
-
-type
-  TPLCTagString = class(TComponent)
-  private
-    FDriver: TISOTCPDriver;
-    FArea: TS7Area;
-    FDB: Word;
-    FOffset: LongWord;
-    FSize: Word;
-    FOnValueChange: TOnValueChange;
-    FScanInterval: Integer;
-    FTimer: jTimer;
-    FMemReadFunction: Integer;
-    FAutoRead: Boolean;
-    FLastValue: string;
-    FValueValid: Boolean;
-    procedure InternalTimer(Sender: TObject);
-    procedure EnsureTimer;
-    procedure KillTimer;
-    procedure InvalidateValue;
-    function GetScanInterval: Integer;
-    function GetDataBytes(const Frame: TBytes): TBytes;
-    procedure DriverOnFrame(Sender: TObject; const Frame: TBytes);
-  public
-    constructor Create(AOwner: TComponent); override;
-    function Connection(Drv: TISOTCPDriver): TPLCTagString;
-    function SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCTagString;
-    function SetArea(AArea: TS7Area): TPLCTagString;
-    function SetScanInterval(Value: Integer): TPLCTagString;
-    function SetAutoRead(Value: Boolean): TPLCTagString;
-    function SetMemReadFunction(Func: Integer): TPLCTagString;
-    function SetMemFileDB(DB: Word): TPLCTagString;
-    function SetMemAddress(Offset: LongWord): TPLCTagString;
-    procedure Read;
-    property OnValueChange: TOnValueChange read FOnValueChange write FOnValueChange;
-    property ScanInterval: Integer read GetScanInterval write FScanInterval;
-    property AutoRead: Boolean read FAutoRead write FAutoRead;
-  end;
-
-constructor TPLCTagString.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  FValueValid := False;
-  FLastValue := '';
-end;
-
-procedure TPLCTagString.InvalidateValue;
-begin
-  FValueValid := False;
-  FLastValue := '';
-end;
-
-function TPLCTagString.Connection(Drv: TISOTCPDriver): TPLCTagString;
-begin
-  FDriver := Drv;
-  FDriver.AddFrameListener(DriverOnFrame);
-  Result := Self;
-end;
-
-function TPLCTagString.SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCTagString;
-begin
-  InvalidateValue;
-  FDB := ADB;
-  FOffset := AOffset;
-  FSize := ASize;
-  Result := Self;
-end;
-
-function TPLCTagString.SetArea(AArea: TS7Area): TPLCTagString;
-begin
-  InvalidateValue;
-  FArea := AArea;
-  Result := Self;
-end;
-
-function TPLCTagString.SetScanInterval(Value: Integer): TPLCTagString;
-begin
-  FScanInterval := Value;
-  if (FScanInterval <= 0) or (not FAutoRead) then
-    KillTimer
-  else
-    EnsureTimer;
-  Result := Self;
-end;
-
-function TPLCTagString.SetAutoRead(Value: Boolean): TPLCTagString;
-begin
-  if FAutoRead <> Value then
-  begin
-    FAutoRead := Value;
-    if FAutoRead then
-      EnsureTimer
-    else
-      KillTimer;
-  end;
-  Result := Self;
-end;
-
-function TPLCTagString.SetMemReadFunction(Func: Integer): TPLCTagString;
-begin
-  FMemReadFunction := Func;
-  case Func of
-    1: SetArea(saInputs);
-    2: SetArea(saOutputs);
-    3: SetArea(saFlags);
-    4: SetArea(saDB);
-    5: SetArea(saCounters);
-    6: SetArea(saTimers);
-  else
-    SetArea(saDB);
-  end;
-  Result := Self;
-end;
-
-function TPLCTagString.SetMemFileDB(DB: Word): TPLCTagString;
-begin
-  InvalidateValue;
-  FDB := DB;
-  Result := Self;
-end;
-
-function TPLCTagString.SetMemAddress(Offset: LongWord): TPLCTagString;
-begin
-  InvalidateValue;
-  FOffset := Offset;
-  Result := Self;
-end;
-
-procedure TPLCTagString.InternalTimer(Sender: TObject);
-begin
-  Read;
-end;
-
-procedure TPLCTagString.EnsureTimer;
-begin
-  if not FAutoRead then Exit;
-  if (FTimer = nil) and (FScanInterval > 0) then
-  begin
-    if Owner <> nil then
-      FTimer := jTimer.Create(Owner)
-    else
-      FTimer := jTimer.Create(nil);
-    FTimer.Init;
-    FTimer.Interval := FScanInterval;
-    FTimer.OnTimer := InternalTimer;
-    FTimer.Enabled := True;
-  end
-  else if (FTimer <> nil) then
-  begin
-    FTimer.Interval := FScanInterval;
-    FTimer.Enabled := FScanInterval > 0;
-  end;
-end;
-
-procedure TPLCTagString.KillTimer;
-begin
-  if FTimer <> nil then
-  begin
-    FTimer.Enabled := False;
-    FreeAndNil(FTimer);
-  end;
-end;
-
-function TPLCTagString.GetScanInterval: Integer;
-begin
-  Result := FScanInterval;
-end;
-
-function TPLCTagString.GetDataBytes(const Frame: TBytes): TBytes;
-var
-  i, Offset: Integer;
-begin
-  SetLength(Result, FSize);
-  Offset := 25;
-  for i := 0 to FSize - 1 do
-    if (Offset + i) < Length(Frame) then
-      Result[i] := Frame[Offset + i]
-    else
-      Result[i] := 0;
-end;
-
-procedure TPLCTagString.Read;
-var
-  pdu: TBytes;
-begin
-  pdu := S7PDU.BuildReadVar(FArea, FDB, FOffset, FSize, tsByte);
-  FDriver.SendPDU(pdu);
-end;
-
-procedure TPLCTagString.DriverOnFrame(Sender: TObject; const Frame: TBytes);
-var
-  data: TBytes;
-  st: Integer;
-  ValStr: string;
-  i: Integer;
-begin
-  if not S7Parser.IsReadResponseOK(Frame) then Exit;
-  data := GetDataBytes(Frame);
-  if Length(data) < 2 then Exit;
-  st := data[1];
-  if st > Length(data) - 2 then st := Length(data) - 2;
-  ValStr := '';
-  for i := 0 to st - 1 do
-    ValStr := ValStr + Chr(data[2 + i]);
-  if (not FValueValid) or (ValStr <> FLastValue) then
-  begin
-    FValueValid := True;
-    FLastValue := ValStr;
-    if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
-  end;
 end;
 
 procedure TPLCTagNumber.EnsureTimer;
@@ -830,20 +656,47 @@ var
 begin
   if Length(Data) = 2 then
   begin
-    if FSwapBytes then SwapPair(0,1);
+    if FSwapBytes then
+      SwapPair(0,1);
     Exit;
   end;
   if Length(Data) = 4 then
   begin
-    if FSwapBytes then begin SwapPair(0,1); SwapPair(2,3); end;
-    if FSwapWords then begin SwapPair(0,2); SwapPair(1,3); end;
+    if FSwapBytes then
+    begin
+      SwapPair(0,1);
+      SwapPair(2,3);
+    end;
+    if FSwapWords then
+    begin
+      SwapPair(0,2);
+      SwapPair(1,3);
+    end;
     Exit;
   end;
   if Length(Data) = 8 then
   begin
-    if FSwapBytes then begin SwapPair(0,1); SwapPair(2,3); SwapPair(4,5); SwapPair(6,7); end;
-    if FSwapWords then begin SwapPair(0,2); SwapPair(1,3); SwapPair(4,6); SwapPair(5,7); end;
-    if FSwapDWords then begin SwapPair(0,4); SwapPair(1,5); SwapPair(2,6); SwapPair(3,7); end;
+    if FSwapBytes then
+    begin
+      SwapPair(0,1);
+      SwapPair(2,3);
+      SwapPair(4,5);
+      SwapPair(6,7);
+    end;
+    if FSwapWords then
+    begin
+      SwapPair(0,2);
+      SwapPair(1,3);
+      SwapPair(4,6);
+      SwapPair(5,7);
+    end;
+    if FSwapDWords then
+    begin
+      SwapPair(0,4);
+      SwapPair(1,5);
+      SwapPair(2,6);
+      SwapPair(3,7);
+    end;
     Exit;
   end;
 end;

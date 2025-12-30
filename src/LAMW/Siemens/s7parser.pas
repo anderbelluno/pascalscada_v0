@@ -26,7 +26,8 @@ var
 begin
   Result := '';
   n := Length(Data);
-  if n > MaxBytes then n := MaxBytes;
+  if n > MaxBytes then
+    n := MaxBytes;
   for i := 0 to n - 1 do
     Result := Result + IntToHex(Data[i], 2) + ' ';
 end;
@@ -59,8 +60,10 @@ begin
     if (Resp[17] <> 0) or (Resp[18] <> 0) then
     begin
       AndroidLog.LogD('PLC', 'Erro retornado pelo PLC. Error Class: ' + IntToHex(Resp[17], 2) + ' Error Code: ' + IntToHex(Resp[18], 2));
-      if Resp[18] = $85 then AndroidLog.LogD('PLC', 'Erro 0x85: PDU Inválido ou não suportado (Verifique tamanho do PDU).');
-      if Resp[18] = $81 then AndroidLog.LogD('PLC', 'Erro 0x81: Contexto/Access Error.');
+      if Resp[18] = $85 then
+        AndroidLog.LogD('PLC', 'Erro 0x85: PDU Inválido ou não suportado (Verifique tamanho do PDU).');
+      if Resp[18] = $81 then
+        AndroidLog.LogD('PLC', 'Erro 0x81: Contexto/Access Error.');
       Exit;
     end;
   end;
@@ -135,7 +138,8 @@ end;
 function GetDataOffset(const Resp: TBytes): Integer;
 begin
   Result := -1;
-  if not IsReadResponseOK(Resp) then Exit;
+  if not IsReadResponseOK(Resp) then
+    Exit;
   // TPKT(4) + COTP(3) + S7Header(12) + Param(2) + ItemHeader(4) = 25
   // ItemHeader = ReturnCode(1) + TranspSize(1) + Length(2)
   Result := 25;
@@ -150,7 +154,8 @@ begin
   Result := False;
   AndroidLog.LogD('PLC', 'Tentando parse Int16 da resposta: ' + HexStr(Resp));
   Offset := GetDataOffset(Resp);
-  if Offset < 0 then Exit;
+  if Offset < 0 then
+    Exit;
   if Offset + 1 >= Length(Resp) then
   begin
     AndroidLog.LogD('PLC', 'Dados insuficientes para Int16');
@@ -168,7 +173,8 @@ var
 begin
   Result := False;
   Offset := GetDataOffset(Resp);
-  if Offset < 0 then Exit;
+  if Offset < 0 then
+    Exit;
   Value := Resp[Offset];
   Result := True;
 end;
@@ -179,7 +185,8 @@ var
 begin
   Result := False;
   Offset := GetDataOffset(Resp);
-  if (Offset < 0) or (Offset + 1 >= Length(Resp)) then Exit;
+  if (Offset < 0) or (Offset + 1 >= Length(Resp)) then
+    Exit;
   Value := (Resp[Offset] shl 8) or Resp[Offset + 1];
   Result := True;
 end;
@@ -190,7 +197,8 @@ var
 begin
   Result := False;
   Offset := GetDataOffset(Resp);
-  if (Offset < 0) or (Offset + 3 >= Length(Resp)) then Exit;
+  if (Offset < 0) or (Offset + 3 >= Length(Resp)) then
+    Exit;
   Value := (Resp[Offset] shl 24) or (Resp[Offset + 1] shl 16) or
            (Resp[Offset + 2] shl 8) or Resp[Offset + 3];
   Result := True;
@@ -201,7 +209,8 @@ var
   u: LongWord;
 begin
   Result := ParseReadResponseDWord(Resp, u);
-  if Result then Value := LongInt(u);
+  if Result then
+    Value := LongInt(u);
 end;
 
 function ParseReadResponseReal(const Resp: TBytes; out Value: Single): Boolean;
@@ -212,7 +221,8 @@ var
 begin
   Result := False;
   Offset := GetDataOffset(Resp);
-  if (Offset < 0) or (Offset + 3 >= Length(Resp)) then Exit;
+  if (Offset < 0) or (Offset + 3 >= Length(Resp)) then
+    Exit;
   u := (Resp[Offset] shl 24) or (Resp[Offset + 1] shl 16) or
        (Resp[Offset + 2] shl 8) or Resp[Offset + 3];
   p := @u;
@@ -225,8 +235,10 @@ var
   b: Byte;
 begin
   Result := False;
-  if not ParseReadResponseByte(Resp, b) then Exit;
-  if (BitIndex < 0) or (BitIndex > 7) then Exit;
+  if not ParseReadResponseByte(Resp, b) then
+    Exit;
+  if (BitIndex < 0) or (BitIndex > 7) then
+    Exit;
   Value := (b and (1 shl BitIndex)) <> 0;
   Result := True;
 end;

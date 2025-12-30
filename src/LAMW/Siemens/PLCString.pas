@@ -54,34 +54,34 @@ constructor TPLCString.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FValueValid := False;
-  FLastValue := '';
+  FLastValue  := '';
 end;
 
 procedure TPLCString.InvalidateValue;
 begin
   FValueValid := False;
-  FLastValue := '';
+  FLastValue  := '';
 end;
 
 function TPLCString.Connection(Drv: TISOTCPDriver): TPLCString;
 begin
   FDriver := Drv;
-  Result := Self;
+  Result  := Self;
 end;
 
 function TPLCString.SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCString;
 begin
   InvalidateValue;
-  FDB := ADB;
+  FDB     := ADB;
   FOffset := AOffset;
-  FSize := ASize;
-  Result := Self;
+  FSize   := ASize;
+  Result  := Self;
 end;
 
 function TPLCString.SetArea(AArea: TS7Area): TPLCString;
 begin
   InvalidateValue;
-  FArea := AArea;
+  FArea  := AArea;
   Result := Self;
 end;
 
@@ -127,7 +127,7 @@ end;
 function TPLCString.SetMemFileDB(DB: Word): TPLCString;
 begin
   InvalidateValue;
-  FDB := DB;
+  FDB    := DB;
   Result := Self;
 end;
 
@@ -135,7 +135,7 @@ function TPLCString.SetMemAddress(Offset: LongWord): TPLCString;
 begin
   InvalidateValue;
   FOffset := Offset;
-  Result := Self;
+  Result  := Self;
 end;
 
 procedure TPLCString.InternalTimer(Sender: TObject);
@@ -154,13 +154,13 @@ begin
       FTimer := jTimer.Create(nil);
     FTimer.Init;
     FTimer.Interval := FScanInterval;
-    FTimer.OnTimer := InternalTimer;
-    FTimer.Enabled := True;
+    FTimer.OnTimer  := InternalTimer;
+    FTimer.Enabled  := True;
   end
   else if (FTimer <> nil) then
   begin
     FTimer.Interval := FScanInterval;
-    FTimer.Enabled := FScanInterval > 0;
+    FTimer.Enabled  := FScanInterval > 0;
   end;
 end;
 
@@ -206,11 +206,14 @@ var
   s: string;
   i: Integer;
 begin
-  if not S7Parser.IsReadResponseOK(Frame) then Exit;
+  if not S7Parser.IsReadResponseOK(Frame) then
+    Exit;
   data := GetDataBytes(Frame);
-  if Length(data) < 2 then Exit;
+  if Length(data) < 2 then
+    Exit;
   st := data[1];
-  if st > Length(data) - 2 then st := Length(data) - 2;
+  if st > Length(data) - 2 then
+    st := Length(data) - 2;
   s := '';
   for i := 0 to st - 1 do
     s := s + Chr(data[2 + i]);
@@ -218,7 +221,8 @@ begin
   begin
     FValueValid := True;
     FLastValue := s;
-    if Assigned(FOnValueChange) then FOnValueChange(Self, s);
+    if Assigned(FOnValueChange) then
+      FOnValueChange(Self, s);
   end;
 end;
 

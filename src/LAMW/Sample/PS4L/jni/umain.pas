@@ -40,14 +40,10 @@ type
 var
   AndroidModule1: TAndroidModule1;
 
-  
 implementation
-  
-  
-{$R *.lfm}
-  
 
-  
+{$R *.lfm}
+
 { TAndroidModule1 }
 
 procedure TAndroidModule1.OnS7Connected(Sender: TObject);
@@ -65,16 +61,21 @@ end;
 
 procedure TAndroidModule1.AndroidModule1Destroy(Sender: TObject);
 begin
-  if Assigned(ReadBit) then ReadBit.Free;
-  if Assigned(ReadNumber) then ReadNumber.Free;
-  if Assigned(ReadText) then ReadText.Free;
-  if Assigned(Driver) then Driver.Free;
-  if Assigned(PortTCP) then PortTCP.Free;
+  if Assigned(ReadBit) then
+    ReadBit.Free;
+  if Assigned(ReadNumber) then
+    ReadNumber.Free;
+  if Assigned(ReadText) then
+    ReadText.Free;
+  if Assigned(Driver) then
+    Driver.Free;
+  if Assigned(PortTCP) then
+    PortTCP.Free;
 end;
 
 procedure TAndroidModule1.AndroidModule1JNIPrompt(Sender: TObject);
 begin
-    FS7Ready := False;
+  FS7Ready := False;
   TextView1.AppendLn('OnJNIPrompt');
   TextView1.SetVerticalScrollBarEnabled(True);
   SetDebugLogging(True);
@@ -139,7 +140,6 @@ begin
     if FS7Ready then
     begin
       Panel1.BackgroundColor := colbrGreen;
-     // ReadNumber.Read;
     end
     else
     begin

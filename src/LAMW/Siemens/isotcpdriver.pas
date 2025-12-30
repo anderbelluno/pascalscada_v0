@@ -5,7 +5,7 @@ unit ISOTCPDriver;
 interface
 
 uses
-  Classes, SysUtils, AndroidWidget, Laz_And_Controls, TCPPort, S7Transport;
+  Classes, SysUtils, AndroidWidget, Laz_And_Controls, TCPPort, S7Transport, AndroidLog;
 
 type
   TISOTCPDriver = class(TComponent)
@@ -24,15 +24,6 @@ type
   end;
 
 implementation
-
-procedure AppLog(const tag: string; const msg: string);
-begin
-  try
-    if (Assigned(gApp)) and (Assigned(gApp.Jni.jEnv)) and (Assigned(gApp.Form)) and jForm(gApp.Form).Initialized then
-      jForm(gApp.Form).LogDebug(tag, msg);
-  except
-  end;
-end;
 
 constructor TISOTCPDriver.Create(AOwner: TComponent; APort: TPortTCP);
 begin
@@ -55,7 +46,7 @@ end;
 
 function TISOTCPDriver.Connect: TISOTCPDriver;
 begin
-  AppLog('PLC', 'Driver.Connect');
+  LogD('PLC', 'Driver.Connect');
   FPort.Connect;
   Result := Self;
 end;
@@ -68,13 +59,13 @@ end;
 
 procedure TISOTCPDriver.SendPDU(const Data: TBytes);
 begin
-  AppLog('PLC', 'Driver.SendPDU ' + IntToStr(Length(Data)) + ' bytes');
+  LogD('PLC', 'Driver.SendPDU ' + IntToStr(Length(Data)) + ' bytes');
   FPort.Send(Data);
 end;
 
 procedure TISOTCPDriver.PortOnFrame(Sender: TObject; const Frame: TBytes);
 begin
-  AppLog('PLC', 'Driver.PortOnFrame len=' + IntToStr(Length(Frame)));
+  LogD('PLC', 'Driver.PortOnFrame len=' + IntToStr(Length(Frame)));
   if Assigned(FOnFrame) then FOnFrame(Self, Frame);
 end;
 
