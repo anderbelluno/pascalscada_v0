@@ -8,6 +8,18 @@ type
   TS7Area = (saMarker, saDB, saInputs, saOutputs, saFlags, saTimers, saCounters);
   TS7TransportSize = (tsBit, tsByte, tsWord, tsDWord, tsReal);
 
+  TS7TagType = (
+    pttDefault,
+    pttBool,
+    pttShortInt, pttByte,
+    pttSmallInt, pttWord,
+    pttLongInt,  pttDWord, pttFloat,
+    pttInt,      pttDInt,
+    pttInt64,    pttQWord, pttDouble
+  );
+
+  TPLCNumberKind = (nkByte, nkWord, nkDWord, nkInt, nkDInt, nkReal);
+
 function S7AreaCode(Area: TS7Area): Byte;
 function S7TransportSizeCode(Size: TS7TransportSize): Byte;
 

@@ -1545,6 +1545,11 @@ public  java.lang.Object jPanel_Create(long pasobj ) {
   return (java.lang.Object)(new jPanel(this.activity,this,pasobj));
 }
 
+public java.lang.Object jSwitchButton_jCreate(long _Self) {
+   return (java.lang.Object)(new jSwitchButton(this,_Self));
+}
+public native void pOnChangeSwitchButton(long pasobj, boolean state);
+
 public java.lang.Object jTCPSocketClient_jCreate(long _Self) {
    return (java.lang.Object)(new jTCPSocketClient(this,_Self));
 }

@@ -60,7 +60,7 @@
         <UnitName Value="uMain"/>
         <CustomData Count="2">
           <Item0 Name="fclControls"/>
-          <Item1 Name="jControls" Value="jButton;jEditText;jForm;jPanel;jTCPSocketClient;jTextView;jTimer"/>
+          <Item1 Name="jControls" Value="jButton;jEditText;jForm;jPanel;jSwitchButton;jTCPSocketClient;jTextView;jTimer"/>
         </CustomData>
       </Unit>
     </Units>

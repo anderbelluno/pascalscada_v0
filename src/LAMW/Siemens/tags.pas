@@ -5,20 +5,10 @@ unit Tags;
 interface
 
 uses
-  Classes, SysUtils, AndroidWidget, Laz_And_Controls, S7Types_Siemens, S7PDU, S7Parser, ISOTCPDriver_Siemens, AndroidLog;
+  Classes, SysUtils, AndroidWidget, Laz_And_Controls, S7Types_Siemens, S7PDU,
+  S7Parser, ISOTCPDriver_Siemens, AndroidLog, PLCStructElement;
 
 type
-  TS7TagType = (
-    pttDefault,
-    pttBool,
-    pttShortInt, pttByte,
-    pttSmallInt, pttWord,
-    pttLongInt,  pttDWord, pttFloat,
-    pttInt,      pttDInt,
-    pttInt64,    pttQWord, pttDouble
-  );
-
-  
 
   TPLCNumberKind = (nkByte, nkWord, nkDWord, nkInt, nkDInt, nkReal);
 
@@ -114,12 +104,30 @@ type
   end;
 
   TTagBit = class(TPLCTagNumber)
+  private
+    FStructItem: TPLCStructItem;
+    FStartBit: Integer;
+    FEndBit: Integer;
+    procedure StructItemChanged(Sender: TObject);
+    function GetValue: Integer;
+    function GetAsBoolean: Boolean;
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
     function SetBit(AIndex: Integer): TTagBit;
+    function SetStartBit(Value: Integer): TTagBit;
+    function SetEndBit(Value: Integer): TTagBit;
+    procedure SetStartBitProp(Value: Integer);
+    procedure SetEndBitProp(Value: Integer);
+    function ConnectToStructItem(AItem: TPLCStructItem): TTagBit;
+    property StartBit: Integer read FStartBit write SetStartBitProp;
+    property EndBit: Integer read FEndBit write SetEndBitProp;
+    property Value: Integer read GetValue;
+    property AsBoolean: Boolean read GetAsBoolean;
+    destructor Destroy; override;
   end;
 
 implementation
-
 
 constructor TPLCTagNumber.Create(AOwner: TComponent);
 begin
@@ -178,7 +186,138 @@ begin
   // SetTagType calls InvalidateValue
   SetTagType(pttBool);
   SetBitIndex(AIndex);
+  FStartBit := AIndex;
+  FEndBit := AIndex;
   Result := Self;
+end;
+
+function TTagBit.SetStartBit(Value: Integer): TTagBit;
+begin
+  FStartBit := Value;
+  InvalidateValue;
+  Result := Self;
+end;
+
+function TTagBit.SetEndBit(Value: Integer): TTagBit;
+begin
+  FEndBit := Value;
+  InvalidateValue;
+  Result := Self;
+end;
+
+function TTagBit.GetValue: Integer;
+var
+  Val, Mask: Integer;
+begin
+  if Assigned(FStructItem) then
+  begin
+    Val := FStructItem.GetValueAsInteger;
+    
+    // Ensure EndBit is valid
+    if FEndBit < FStartBit then
+      Mask := (1 shl FStartBit)
+    else
+      Mask := ((1 shl (FEndBit - FStartBit + 1)) - 1) shl FStartBit;
+      
+    Result := (Val and Mask) shr FStartBit;
+  end
+  else
+    Result := 0;
+end;
+
+function TTagBit.GetAsBoolean: Boolean;
+begin
+  Result := GetValue <> 0;
+end;
+
+procedure TTagBit.SetStartBitProp(Value: Integer);
+begin
+  SetStartBit(Value);
+end;
+
+procedure TTagBit.SetEndBitProp(Value: Integer);
+begin
+  SetEndBit(Value);
+end;
+
+function TTagBit.ConnectToStructItem(AItem: TPLCStructItem): TTagBit;
+begin
+  if FStructItem = AItem then Exit(Self);
+
+  if Assigned(FStructItem) then
+  begin
+    FStructItem.RemoveFreeNotification(Self);
+    FStructItem.RemoveListener(StructItemChanged);
+  end;
+
+  FStructItem := AItem;
+  
+  if Assigned(FStructItem) then
+  begin
+    FStructItem.FreeNotification(Self);
+    FStructItem.AddListener(StructItemChanged);
+  end;
+  Result := Self;
+end;
+
+procedure TTagBit.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (AComponent = FStructItem) then
+  begin
+    FStructItem := nil;
+  end;
+end;
+
+destructor TTagBit.Destroy;
+begin
+  if Assigned(FStructItem) then
+  begin
+    FStructItem.RemoveFreeNotification(Self);
+    FStructItem.RemoveListener(StructItemChanged);
+    FStructItem := nil;
+  end;
+  inherited Destroy;
+end;
+
+procedure TTagBit.StructItemChanged(Sender: TObject);
+var
+  Val, Mask, Res: Integer;
+  ValStr: string;
+begin
+  if Assigned(FStructItem) then
+  begin
+    Val := FStructItem.GetValueAsInteger;
+    
+    if FEndBit < FStartBit then FEndBit := FStartBit;
+    
+    Mask := ((1 shl (FEndBit - FStartBit + 1)) - 1) shl FStartBit;
+    Res := (Val and Mask) shr FStartBit;
+    
+    if FStartBit = FEndBit then
+    begin
+       if Res <> 0 then ValStr := 'True' else ValStr := 'False';
+    end
+    else
+    begin
+       ValStr := IntToStr(Res);
+    end;
+    
+    if Assigned(FOnValueReal) then FOnValueReal(Self, Res);
+
+    if (not FValueValid) or (ValStr <> FLastValue) then
+    begin
+      FValueValid := True;
+      FLastValue := ValStr;
+      
+      if FStartBit = FEndBit then
+      begin
+         if Assigned(FOnValueBool) then FOnValueBool(Self, Res <> 0);
+      end;
+      
+      if Assigned(FOnValueChange) then FOnValueChange(Self, ValStr);
+    end;
+  end;
 end;
 
 function TPLCTagNumber.SetTransportSize(ATS: TS7TransportSize): TPLCTagNumber;

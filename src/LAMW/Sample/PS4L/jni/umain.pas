@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, AndroidWidget, Laz_And_Controls,
-  tcpsocketclient, And_jni, AndroidLog,
-  TCPPort, ISOTCPDriver_Siemens, Tags, S7Types_Siemens, PLCString;
+  tcpsocketclient, And_jni, switchbutton, AndroidLog,
+  TCPPort, ISOTCPDriver_Siemens, Tags, S7Types_Siemens, PLCString, PLCStruct, PLCStructElement;
 
 type
 
@@ -18,14 +18,22 @@ type
     EditText1: jEditText;
     EditText2: jEditText;
     Panel1: jPanel;
+    Panel2: jPanel;
+    SwitchButton1: jSwitchButton;
+    SwitchButton2: jSwitchButton;
     TCPSocketClient1: jTCPSocketClient;
     TextView1: jTextView;
+    TextView2: jTextView;
+    TextView3: jTextView;
     Timer1: jTimer;
     procedure AndroidModule1Destroy(Sender: TObject);
     procedure AndroidModule1JNIPrompt(Sender: TObject);
     procedure btnConnectClick(Sender: TObject);
     procedure OnS7Connected(Sender: TObject);
     procedure OnTagUpdated(Sender: TObject; const ValueText: string);
+    procedure OnTagBitUpdated(Sender: TObject; Value: Boolean);
+    procedure OnTagBitUpdated2(Sender: TObject; Value: Boolean);
+    procedure OnStructItemUpdated(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
   private
     PortTCP: TPortTCP;
@@ -33,6 +41,9 @@ type
     ReadNumber: TPLCTagNumber;
     ReadText: TPLCString;
     ReadBit: TTagBit;
+    ReadBit1 : TTagBit;
+    MyStruct: TPLCStruct;
+    MyStructItem: TPLCStructItem;
     FS7Ready: Boolean;
     PiscaPisca: Integer;
   end;
@@ -59,10 +70,52 @@ begin
   TextView1.AppendLn('Valor lido: ' + ValueText);
 end;
 
+procedure TAndroidModule1.OnTagBitUpdated(Sender: TObject; Value: Boolean);
+begin
+  if Value then
+  begin
+    TextView1.AppendLn('Bit 0 (Struct): LIGADO');
+    SwitchButton1.State := tsOn;
+  end
+  else
+  begin
+    TextView1.AppendLn('Bit 0 (Struct): DESLIGADO');
+    SwitchButton1.State := tsOff;
+  end;
+end;
+
+procedure TAndroidModule1.OnTagBitUpdated2(Sender: TObject; Value: Boolean);
+begin
+  if Value then
+  begin
+    TextView1.AppendLn('Bit 1 (Struct): LIGADO');
+    SwitchButton2.State := tsOn;
+  end
+  else
+  begin
+    TextView1.AppendLn('Bit 1 (Struct): DESLIGADO');
+    SwitchButton2.State := tsOff;
+  end;
+end;
+
+procedure TAndroidModule1.OnStructItemUpdated(Sender: TObject);
+var
+  Item: TPLCStructItem;
+begin
+  Item := TPLCStructItem(Sender);
+  TextView1.AppendLn('Struct Item (Byte @60): ' + IntToStr(Item.GetValueAsInteger));
+end;
+
 procedure TAndroidModule1.AndroidModule1Destroy(Sender: TObject);
 begin
+  if Assigned(MyStructItem) then
+    MyStructItem.Free;
+  if Assigned(MyStruct) then
+    MyStruct.Free;
   if Assigned(ReadBit) then
     ReadBit.Free;
+  if Assigned(ReadBit1) then
+    ReadBit1.Free;
   if Assigned(ReadNumber) then
     ReadNumber.Free;
   if Assigned(ReadText) then
@@ -115,14 +168,29 @@ begin
              .SetDB(1, 4, 52);
     ReadText.OnValueChange := OnTagUpdated;
 
+    MyStruct := TPLCStruct.Create(Self);
+    MyStruct.Connection(Driver)
+            .SetScanInterval(1500)
+            .SetAutoRead(True)
+            .SetDB(1, 58, 10);
+
+    MyStructItem := TPLCStructItem.Create(Self);
+    MyStructItem.SetStruct(MyStruct)
+                .SetIndex(0)
+                .SetTagType(pttByte);
+   // MyStructItem.OnValueChange := OnStructItemUpdated;
+
     ReadBit := TTagBit.Create(Self);
-    ReadBit.Connection(Driver)
-           .SetScanInterval(1200)
-           .SetAutoRead(True)
-           .SetMemReadFunction(4)
-           .SetDB(1, 56);
-    ReadBit.SetBit(0);
-    ReadBit.OnValueChange := OnTagUpdated;
+    ReadBit.ConnectToStructItem(MyStructItem)
+           .SetStartBit(0)
+           .SetEndBit(0);
+    ReadBit.OnValueBool := OnTagBitUpdated;
+
+    ReadBit1 := TTagBit.Create(Self);
+    ReadBit1.ConnectToStructItem(MyStructItem)
+           .SetStartBit(1)
+           .SetEndBit(1);
+    ReadBit1.OnValueBool := OnTagBitUpdated2;
 
     Driver.Connect;
   end

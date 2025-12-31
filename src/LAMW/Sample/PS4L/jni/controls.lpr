@@ -32,6 +32,15 @@ begin
 end;
 
 { Class:     com_br_gp2e_ps4l_Controls
+  Method:    pOnChangeSwitchButton
+  Signature: (JZ)V }
+procedure pOnChangeSwitchButton(PEnv: PJNIEnv; this: JObject; pasobj: JLong; 
+  state: JBoolean); cdecl;
+begin
+  Java_Event_pOnChangeSwitchButton(PEnv, this, TObject(pasobj), state);
+end;
+
+{ Class:     com_br_gp2e_ps4l_Controls
   Method:    pOnTCPSocketClientMessageReceived
   Signature: (JLjava/lang/String;)V }
 procedure pOnTCPSocketClientMessageReceived(PEnv: PJNIEnv; this: JObject; 
@@ -543,13 +552,16 @@ begin
   Java_Event_pOnRunOnUiThread(PEnv, this, TObject(pasobj), tag);
 end;
 
-const NativeMethods: array[0..59] of JNINativeMethod = (
+const NativeMethods: array[0..60] of JNINativeMethod = (
    (name: 'pEditTextOnActionIconTouchUp';
     signature: '(JLjava/lang/String;)V';
     fnPtr: @pEditTextOnActionIconTouchUp; ),
    (name: 'pEditTextOnActionIconTouchDown';
     signature: '(JLjava/lang/String;)V';
     fnPtr: @pEditTextOnActionIconTouchDown; ),
+   (name: 'pOnChangeSwitchButton';
+    signature: '(JZ)V';
+    fnPtr: @pOnChangeSwitchButton; ),
    (name: 'pOnTCPSocketClientMessageReceived';
     signature: '(JLjava/lang/String;)V';
     fnPtr: @pOnTCPSocketClientMessageReceived; ),
@@ -798,6 +810,8 @@ exports
     +'pEditTextOnActionIconTouchUp',
   pEditTextOnActionIconTouchDown name 'Java_com_br_gp2e_ps4l_Controls_'
     +'pEditTextOnActionIconTouchDown',
+  pOnChangeSwitchButton name 'Java_com_br_gp2e_ps4l_Controls_'
+    +'pOnChangeSwitchButton',
   pOnTCPSocketClientMessageReceived name 'Java_com_br_gp2e_ps4l_Controls_'
     +'pOnTCPSocketClientMessageReceived',
   pOnTCPSocketClientBytesReceived name 'Java_com_br_gp2e_ps4l_Controls_'

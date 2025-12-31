@@ -8,7 +8,7 @@ object AndroidModule1: TAndroidModule1
   Left = 0
   Top = 0
   Width = 439
-  Height = 573
+  Height = 657
   Text = 'AndroidModule1'
   ActivityMode = actMain
   BackgroundColor = colbrDefault
@@ -50,13 +50,13 @@ object AndroidModule1: TAndroidModule1
     Left = 5
     Top = 241
     Width = 429
-    Height = 358
+    Height = 183
     Visible = True
     Anchor = Panel1
     PosRelativeToAnchor = [raBelow]
     PosRelativeToParent = [rpLeft, rpRight, rpStart, rpEnd]
     LayoutParamWidth = lpWrapContent
-    LayoutParamHeight = lpFiveEighthOfParent
+    LayoutParamHeight = lpExact
     Alignment = taLeft
     BackgroundColor = colbrDefault
     FontColor = colbrDefault
@@ -157,6 +157,126 @@ object AndroidModule1: TAndroidModule1
       CapSentence = False
       CaptureBackPressed = False
       GravityInParent = lgNone
+    end
+  end
+  object Panel2: jPanel
+    MarginLeft = 0
+    MarginTop = 10
+    MarginRight = 0
+    MarginBottom = 0
+    Enabled = True
+    Left = 0
+    Top = 439
+    Width = 439
+    Height = 82
+    Visible = True
+    Anchor = TextView1
+    PosRelativeToAnchor = [raBelow]
+    PosRelativeToParent = [rpCenterHorizontal]
+    LayoutParamWidth = lpMatchParent
+    LayoutParamHeight = lpOneEighthOfParent
+    BackgroundColor = colbrDefault
+    MinPinchZoomFactor = 0.25
+    MaxPinchZoomFactor = 4
+    AnimationDurationIn = 1500
+    AnimationDurationOut = 1500
+    AnimationMode = animNone
+    object TextView2: jTextView
+      MarginLeft = 10
+      MarginTop = 5
+      MarginRight = 5
+      MarginBottom = 5
+      Enabled = True
+      Left = 10
+      Top = 31
+      Width = 28
+      Height = 20
+      Visible = True
+      PosRelativeToAnchor = []
+      PosRelativeToParent = [rpLeft, rpCenterVertical]
+      LayoutParamWidth = lpWrapContent
+      LayoutParamHeight = lpWrapContent
+      Text = 'Bit 0:'
+      Alignment = taLeft
+      BackgroundColor = colbrDefault
+      FontColor = colbrDefault
+      FontSize = 0
+      TextTypeFace = tfNormal
+      FontSizeUnit = unitDefault
+      GravityInParent = lgNone
+    end
+    object TextView3: jTextView
+      MarginLeft = 5
+      MarginTop = 5
+      MarginRight = 5
+      MarginBottom = 5
+      Enabled = True
+      Left = 158
+      Top = 31
+      Width = 28
+      Height = 20
+      Visible = True
+      Anchor = SwitchButton1
+      PosRelativeToAnchor = [raToRightOf]
+      PosRelativeToParent = [rpCenterVertical]
+      LayoutParamWidth = lpWrapContent
+      LayoutParamHeight = lpWrapContent
+      Text = 'Bit 1:'
+      Alignment = taLeft
+      BackgroundColor = colbrDefault
+      FontColor = colbrDefault
+      FontSize = 0
+      TextTypeFace = tfNormal
+      FontSizeUnit = unitDefault
+      GravityInParent = lgNone
+      Left = 28
+      Top = 28
+    end
+    object SwitchButton1: jSwitchButton
+      MarginLeft = 7
+      MarginTop = 7
+      MarginRight = 7
+      MarginBottom = 7
+      Enabled = True
+      Left = 50
+      Top = 27
+      Width = 96
+      Height = 28
+      Visible = True
+      Anchor = TextView2
+      PosRelativeToAnchor = [raToRightOf]
+      PosRelativeToParent = [rpCenterVertical]
+      LayoutParamWidth = lpWrapContent
+      LayoutParamHeight = lpWrapContent
+      BackgroundColor = colbrDefault
+      TextOff = 'OFF'
+      TextOn = 'ON'
+      State = tsOff
+      GravityInParent = lgNone
+    end
+    object SwitchButton2: jSwitchButton
+      MarginLeft = 7
+      MarginTop = 7
+      MarginRight = 7
+      MarginBottom = 7
+      Enabled = True
+      Left = 198
+      Top = 27
+      Width = 96
+      Height = 28
+      Visible = True
+      Anchor = TextView3
+      PosRelativeToAnchor = [raToRightOf]
+      PosRelativeToParent = [rpCenterVertical]
+      LayoutParamWidth = lpWrapContent
+      LayoutParamHeight = lpWrapContent
+      BackgroundColor = colbrDefault
+      TextOff = 'OFF'
+      TextOn = 'ON'
+      State = tsOff
+      GravityInParent = lgNone
+      Left = 28
+      Top = 28
     end
   end
   object Timer1: jTimer
