@@ -110,7 +110,9 @@ type
     FEndBit: Integer;
     procedure StructItemChanged(Sender: TObject);
     function GetValue: Integer;
+    procedure SetValue(Value: Integer);
     function GetAsBoolean: Boolean;
+    procedure SetAsBoolean(Value: Boolean);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
@@ -122,8 +124,8 @@ type
     function ConnectToStructItem(AItem: TPLCStructItem): TTagBit;
     property StartBit: Integer read FStartBit write SetStartBitProp;
     property EndBit: Integer read FEndBit write SetEndBitProp;
-    property Value: Integer read GetValue;
-    property AsBoolean: Boolean read GetAsBoolean;
+    property Value: Integer read GetValue write SetValue;
+    property AsBoolean: Boolean read GetAsBoolean write SetAsBoolean;
     destructor Destroy; override;
   end;
 
@@ -225,9 +227,41 @@ begin
     Result := 0;
 end;
 
+procedure TTagBit.SetValue(Value: Integer);
+var
+  CurrentVal, Mask, NewVal: Integer;
+begin
+  if not Assigned(FStructItem) then Exit;
+
+  CurrentVal := FStructItem.GetValueAsInteger;
+
+  // Calculate Mask for the target bits
+  if FEndBit < FStartBit then
+    Mask := (1 shl FStartBit)
+  else
+    Mask := ((1 shl (FEndBit - FStartBit + 1)) - 1) shl FStartBit;
+
+  // Clear target bits in current value
+  CurrentVal := CurrentVal and (not Mask);
+
+  // Shift new value to correct position and mask it to ensure it fits
+  NewVal := (Value shl FStartBit) and Mask;
+
+  // Combine
+  FStructItem.SetValueAsInteger(CurrentVal or NewVal);
+end;
+
 function TTagBit.GetAsBoolean: Boolean;
 begin
   Result := GetValue <> 0;
+end;
+
+procedure TTagBit.SetAsBoolean(Value: Boolean);
+begin
+  if Value then
+    SetValue(1)
+  else
+    SetValue(0);
 end;
 
 procedure TTagBit.SetStartBitProp(Value: Integer);

@@ -34,6 +34,8 @@ type
     procedure OnTagBitUpdated(Sender: TObject; Value: Boolean);
     procedure OnTagBitUpdated2(Sender: TObject; Value: Boolean);
     procedure OnStructItemUpdated(Sender: TObject);
+    procedure SwitchButton1Toggle(Sender: TObject; isStateOn: boolean);
+    procedure SwitchButton2Toggle(Sender: TObject; isStateOn: boolean);
     procedure Timer1Timer(Sender: TObject);
   private
     PortTCP: TPortTCP;
@@ -104,6 +106,18 @@ var
 begin
   Item := TPLCStructItem(Sender);
   TextView1.AppendLn('Struct Item (Byte @60): ' + IntToStr(Item.GetValueAsInteger));
+end;
+
+procedure TAndroidModule1.SwitchButton1Toggle(Sender: TObject;
+  isStateOn: boolean);
+begin
+  ReadBit.AsBoolean := isStateOn;
+end;
+
+procedure TAndroidModule1.SwitchButton2Toggle(Sender: TObject;
+  isStateOn: boolean);
+begin
+  ReadBit1.AsBoolean := isStateOn;
 end;
 
 procedure TAndroidModule1.AndroidModule1Destroy(Sender: TObject);

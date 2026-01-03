@@ -34,11 +34,15 @@ type
     function SetScanInterval(Value: Integer): TPLCStruct;
     function SetAutoRead(Value: Boolean): TPLCStruct;
     procedure Read;
+    procedure Write;
     procedure AddListener(Listener: TNotifyEvent);
     procedure RemoveListener(Listener: TNotifyEvent);
     function GetByte(Offset: Integer): Byte;
+    procedure SetByte(Offset: Integer; Value: Byte);
     function GetWord(Offset: Integer): Word;
+    procedure SetWord(Offset: Integer; Value: Word);
     function GetDWord(Offset: Integer): LongWord;
+    procedure SetDWord(Offset: Integer; Value: LongWord);
     property Data: TBytes read FData;
   end;
 
@@ -149,6 +153,19 @@ begin
   end;
 end;
 
+procedure TPLCStruct.Write;
+var
+  pdu: TBytes;
+begin
+  if Assigned(FDriver) and (Length(FData) = FSize) then
+  begin
+    pdu := S7PDU.BuildWriteVar(FArea, FDB, FOffset, FSize, tsByte, FData);
+    // Use nil handler for now as we don't process write response deeply yet
+    // Or we could reuse DriverOnFrame if it handled write responses (0x05)
+    FDriver.SendPDU(pdu, nil); 
+  end;
+end;
+
 function TPLCStruct.GetDataBytes(const Frame: TBytes): TBytes;
 var
   i, Offset: Integer;
@@ -231,6 +248,32 @@ begin
     Result := (FData[Offset] shl 24) or (FData[Offset + 1] shl 16) or (FData[Offset + 2] shl 8) or FData[Offset + 3]
   else
     Result := 0;
+end;
+
+procedure TPLCStruct.SetByte(Offset: Integer; Value: Byte);
+begin
+  if (Offset >= 0) and (Offset < Length(FData)) then
+    FData[Offset] := Value;
+end;
+
+procedure TPLCStruct.SetWord(Offset: Integer; Value: Word);
+begin
+  if (Offset >= 0) and (Offset + 1 < Length(FData)) then
+  begin
+    FData[Offset] := (Value shr 8) and $FF;
+    FData[Offset + 1] := Value and $FF;
+  end;
+end;
+
+procedure TPLCStruct.SetDWord(Offset: Integer; Value: LongWord);
+begin
+  if (Offset >= 0) and (Offset + 3 < Length(FData)) then
+  begin
+    FData[Offset] := (Value shr 24) and $FF;
+    FData[Offset + 1] := (Value shr 16) and $FF;
+    FData[Offset + 2] := (Value shr 8) and $FF;
+    FData[Offset + 3] := Value and $FF;
+  end;
 end;
 
 end.

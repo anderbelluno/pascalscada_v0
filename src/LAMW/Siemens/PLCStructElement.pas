@@ -29,6 +29,8 @@ type
     function SetBitIndex(Index: Integer): TPLCStructItem;
     function GetValueAsBoolean: Boolean;
     function GetValueAsInteger: Integer;
+    procedure SetValueAsBoolean(Value: Boolean);
+    procedure SetValueAsInteger(Value: Integer);
     function SetIndex(Value: Integer): TPLCStructItem;
     function SetPLCBlock(Value: TPLCStruct): TPLCStructItem;
     procedure AddListener(Listener: TNotifyEvent);
@@ -196,6 +198,40 @@ begin
     // Add other types as needed
     else Result := 0;
   end;
+end;
+
+procedure TPLCStructItem.SetValueAsBoolean(Value: Boolean);
+var
+  b, Mask: Byte;
+begin
+  if not Assigned(FStruct) then Exit;
+  // Ensure buffer exists
+  if (FStruct.Data = nil) or (Length(FStruct.Data) <= FOffset) then Exit;
+
+  b := FStruct.GetByte(FOffset);
+  Mask := 1 shl FBitIndex;
+  
+  if Value then
+    b := b or Mask
+  else
+    b := b and (not Mask);
+    
+  FStruct.SetByte(FOffset, b);
+  FStruct.Write; 
+end;
+
+procedure TPLCStructItem.SetValueAsInteger(Value: Integer);
+begin
+  if not Assigned(FStruct) then Exit;
+  
+  case FTagType of
+    pttByte: FStruct.SetByte(FOffset, Value);
+    pttWord: FStruct.SetWord(FOffset, Value);
+    pttDWord: FStruct.SetDWord(FOffset, Value);
+    // Add other types as needed
+  end;
+  
+  FStruct.Write;
 end;
 
 end.
