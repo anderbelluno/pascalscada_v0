@@ -18,6 +18,7 @@ type
     FOnFrameReceived: TS7FrameReceived;
     FOnRawBytes: TS7RawBytes;
     FOnS7Connected: TNotifyEvent;
+    FOnS7Disconnected: TNotifyEvent;
     FSrcTSAP: Word;
     FDstTSAP: Word;
     FPrevOnConnected: TNotifyEvent;
@@ -35,13 +36,14 @@ type
     property OnFrameReceived: TS7FrameReceived read FOnFrameReceived write FOnFrameReceived;
     property OnRawBytes: TS7RawBytes read FOnRawBytes write FOnRawBytes;
     property OnS7Connected: TNotifyEvent read FOnS7Connected write FOnS7Connected;
+    property OnS7Disconnected: TNotifyEvent read FOnS7Disconnected write FOnS7Disconnected;
   end;
 
 implementation
 
 procedure AppLog(const tag: string; const msg: string);
 begin
-  AndroidLog.LogD(tag, msg);
+  //AndroidLog.LogD(tag, msg);
 end;
 
 function HexStr(const Data: TBytes; MaxBytes: Integer): string;
@@ -219,6 +221,8 @@ begin
     if (Length(Frame) >= 5) and (Frame[5] = $70) then
     begin
        AppLog('PLC', 'Received DR (Disconnect Request) - Handshake Refused');
+       if Assigned(FOnS7Disconnected) then
+         FOnS7Disconnected(Self);
     end
     else
     // Check for S7 Setup Communication Ack (Function 0xF0)

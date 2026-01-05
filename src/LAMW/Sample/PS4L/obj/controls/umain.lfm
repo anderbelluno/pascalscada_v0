@@ -8,7 +8,7 @@ object AndroidModule1: TAndroidModule1
   Left = 0
   Top = 0
   Width = 439
-  Height = 657
+  Height = 728
   Text = 'AndroidModule1'
   ActivityMode = actMain
   BackgroundColor = colbrDefault
@@ -24,7 +24,7 @@ object AndroidModule1: TAndroidModule1
     MarginBottom = 5
     Enabled = True
     Left = 82
-    Top = 133
+    Top = 64
     Width = 274
     Height = 50
     Visible = True
@@ -33,7 +33,7 @@ object AndroidModule1: TAndroidModule1
     PosRelativeToParent = [rpCenterHorizontal]
     LayoutParamWidth = lpFiveEighthOfParent
     LayoutParamHeight = lpWrapContent
-    Text = 'Connect to PLC'
+    Text = 'Conectar'
     BackgroundColor = colbrDefault
     FontColor = colbrDefault
     FontSize = 0
@@ -41,44 +41,19 @@ object AndroidModule1: TAndroidModule1
     GravityInParent = lgNone
     OnClick = btnConnectClick
   end
-  object TextView1: jTextView
-    MarginLeft = 5
-    MarginTop = 5
-    MarginRight = 5
-    MarginBottom = 5
-    Enabled = True
-    Left = 5
-    Top = 241
-    Width = 429
-    Height = 183
-    Visible = True
-    Anchor = Panel1
-    PosRelativeToAnchor = [raBelow]
-    PosRelativeToParent = [rpLeft, rpRight, rpStart, rpEnd]
-    LayoutParamWidth = lpWrapContent
-    LayoutParamHeight = lpExact
-    Alignment = taLeft
-    BackgroundColor = colbrDefault
-    FontColor = colbrDefault
-    FontSize = 0
-    FontFace = ffSans
-    TextTypeFace = tfNormal
-    FontSizeUnit = unitDefault
-    GravityInParent = lgNone
-  end
   object EditText1: jEditText
     MarginLeft = 5
-    MarginTop = 5
+    MarginTop = 15
     MarginRight = 5
     MarginBottom = 5
     Enabled = True
     Left = 82
-    Top = 84
+    Top = 15
     Width = 274
     Height = 39
     Visible = True
     PosRelativeToAnchor = []
-    PosRelativeToParent = [rpCenterHorizontal]
+    PosRelativeToParent = [rpTop, rpCenterHorizontal]
     LayoutParamWidth = lpFiveEighthOfParent
     LayoutParamHeight = lpWrapContent
     Text = '192.168.1.70'
@@ -108,7 +83,7 @@ object AndroidModule1: TAndroidModule1
     MarginBottom = 0
     Enabled = True
     Left = 82
-    Top = 188
+    Top = 119
     Width = 274
     Height = 48
     Visible = True
@@ -160,19 +135,19 @@ object AndroidModule1: TAndroidModule1
     end
   end
   object Panel2: jPanel
-    MarginLeft = 0
+    MarginLeft = 5
     MarginTop = 10
-    MarginRight = 0
-    MarginBottom = 0
+    MarginRight = 5
+    MarginBottom = 5
     Enabled = True
-    Left = 0
-    Top = 439
-    Width = 439
-    Height = 82
+    Left = 5
+    Top = 487
+    Width = 429
+    Height = 91
     Visible = True
-    Anchor = TextView1
+    Anchor = ScrollView1
     PosRelativeToAnchor = [raBelow]
-    PosRelativeToParent = [rpCenterHorizontal]
+    PosRelativeToParent = [rpLeft, rpRight, rpCenterHorizontal]
     LayoutParamWidth = lpMatchParent
     LayoutParamHeight = lpOneEighthOfParent
     BackgroundColor = colbrDefault
@@ -188,7 +163,7 @@ object AndroidModule1: TAndroidModule1
       MarginBottom = 5
       Enabled = True
       Left = 10
-      Top = 31
+      Top = 35
       Width = 28
       Height = 20
       Visible = True
@@ -212,7 +187,7 @@ object AndroidModule1: TAndroidModule1
       MarginBottom = 5
       Enabled = True
       Left = 158
-      Top = 31
+      Top = 35
       Width = 28
       Height = 20
       Visible = True
@@ -229,8 +204,6 @@ object AndroidModule1: TAndroidModule1
       TextTypeFace = tfNormal
       FontSizeUnit = unitDefault
       GravityInParent = lgNone
-      Left = 28
-      Top = 28
     end
     object SwitchButton1: jSwitchButton
       MarginLeft = 7
@@ -239,7 +212,7 @@ object AndroidModule1: TAndroidModule1
       MarginBottom = 7
       Enabled = True
       Left = 50
-      Top = 27
+      Top = 31
       Width = 96
       Height = 28
       Visible = True
@@ -262,7 +235,7 @@ object AndroidModule1: TAndroidModule1
       MarginBottom = 7
       Enabled = True
       Left = 198
-      Top = 27
+      Top = 31
       Width = 96
       Height = 28
       Visible = True
@@ -277,8 +250,146 @@ object AndroidModule1: TAndroidModule1
       State = tsOff
       GravityInParent = lgNone
       OnToggle = SwitchButton2Toggle
-      Left = 28
-      Top = 28
+    end
+  end
+  object ScrollView1: jScrollView
+    MarginLeft = 5
+    MarginTop = 5
+    MarginRight = 5
+    MarginBottom = 5
+    Enabled = True
+    Left = 5
+    Top = 172
+    Width = 429
+    Height = 300
+    Visible = True
+    Anchor = Panel1
+    PosRelativeToAnchor = [raBelow]
+    PosRelativeToParent = [rpLeft, rpRight]
+    LayoutParamWidth = lpNineTenthsOfParent
+    LayoutParamHeight = lpExact
+    InnerLayout = ilRelative
+    FillViewportEnabled = False
+    ScrollSize = 800
+    BackgroundColor = colbrDefault
+    object TextView1: jTextView
+      MarginLeft = 5
+      MarginTop = 5
+      MarginRight = 5
+      MarginBottom = 5
+      Enabled = True
+      Left = 5
+      Top = 5
+      Width = 419
+      Height = 3
+      Visible = True
+      PosRelativeToAnchor = []
+      PosRelativeToParent = [rpLeft, rpRight, rpStart, rpEnd]
+      LayoutParamWidth = lpWrapContent
+      LayoutParamHeight = lpWrapContent
+      Alignment = taLeft
+      BackgroundColor = colbrDefault
+      FontColor = colbrDefault
+      FontSize = 0
+      FontFace = ffSans
+      TextTypeFace = tfNormal
+      FontSizeUnit = unitDefault
+      GravityInParent = lgNone
+    end
+  end
+  object Panel3: jPanel
+    MarginLeft = 5
+    MarginTop = 10
+    MarginRight = 5
+    MarginBottom = 5
+    Enabled = True
+    Left = 5
+    Top = 593
+    Width = 429
+    Height = 91
+    Visible = True
+    Anchor = Panel2
+    PosRelativeToAnchor = [raBelow]
+    PosRelativeToParent = [rpLeft, rpRight, rpCenterHorizontal]
+    LayoutParamWidth = lpMatchParent
+    LayoutParamHeight = lpOneEighthOfParent
+    BackgroundColor = colbrDefault
+    MinPinchZoomFactor = 0.25
+    MaxPinchZoomFactor = 4
+    AnimationDurationIn = 1500
+    AnimationDurationOut = 1500
+    AnimationMode = animNone
+    object EditText3: jEditText
+      MarginLeft = 10
+      MarginTop = 5
+      MarginRight = 10
+      MarginBottom = 5
+      Enabled = True
+      Left = 10
+      Top = 5
+      Width = 409
+      Height = 45
+      Visible = True
+      PosRelativeToAnchor = []
+      PosRelativeToParent = [rpTop, rpLeft, rpRight]
+      LayoutParamWidth = lp95PercentOfParent
+      LayoutParamHeight = lpHalfOfParent
+      Text = '123'
+      Alignment = taLeft
+      InputTypeEx = itxText
+      MaxTextLength = -1
+      BackgroundColor = colbrDefault
+      FontColor = colbrDefault
+      FontSize = 0
+      HintTextColor = colbrDefault
+      ScrollBarStyle = scrNone
+      MaxLines = 1
+      HorScrollBar = True
+      VerScrollBar = True
+      WrappingLine = False
+      Editable = True
+      FontSizeUnit = unitDefault
+      CloseSoftInputOnEnter = True
+      CapSentence = False
+      CaptureBackPressed = False
+      GravityInParent = lgNone
+      OnLostFocus = EditText3LostFocus
+    end
+    object EditText4: jEditText
+      MarginLeft = 10
+      MarginTop = 15
+      MarginRight = 10
+      MarginBottom = 5
+      Enabled = True
+      Left = 10
+      Top = 41
+      Width = 409
+      Height = 45
+      Visible = True
+      PosRelativeToAnchor = []
+      PosRelativeToParent = [rpBottom, rpLeft, rpRight]
+      LayoutParamWidth = lp95PercentOfParent
+      LayoutParamHeight = lpHalfOfParent
+      Text = '321'
+      Alignment = taLeft
+      InputTypeEx = itxNumber
+      MaxTextLength = -1
+      BackgroundColor = colbrDefault
+      FontColor = colbrDefault
+      FontSize = 0
+      HintTextColor = colbrDefault
+      ScrollBarStyle = scrNone
+      MaxLines = 1
+      HorScrollBar = True
+      VerScrollBar = True
+      WrappingLine = False
+      Editable = True
+      FontSizeUnit = unitDefault
+      CloseSoftInputOnEnter = True
+      CapSentence = False
+      CaptureBackPressed = False
+      GravityInParent = lgNone
+      OnLostFocus = EditText4LostFocus
     end
   end
   object Timer1: jTimer
@@ -289,7 +400,7 @@ object AndroidModule1: TAndroidModule1
     Top = 140
   end
   object TCPSocketClient1: jTCPSocketClient
-    Left = 236
-    Top = 236
+    Left = 392
+    Top = 16
   end
 end

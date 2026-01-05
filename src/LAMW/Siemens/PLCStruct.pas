@@ -8,6 +8,8 @@ uses
   Classes, SysUtils, ISOTCPDriver_Siemens, S7PDU, S7Parser, S7Types_Siemens, AndroidLog, Laz_And_Controls;
 
 type
+  // PT: Classe responsável por ler/escrever um bloco contíguo de memória do PLC
+  // EN: Class responsible for reading/writing a contiguous memory block from the PLC
   TPLCStruct = class(TComponent)
   private
     FDriver: TISOTCPDriver;
@@ -20,30 +22,89 @@ type
     FTimer: jTimer;
     FData: TBytes;
     FListeners: TList;
+    FLastSyncReadStatus: TProtocolIOResult;
+    FLastSyncWriteStatus: TProtocolIOResult;
     procedure InternalTimer(Sender: TObject);
     procedure EnsureTimer;
     procedure KillTimer;
-    procedure DriverOnFrame(Sender: TObject; const Frame: TBytes);
+    procedure DriverOnReadFrame(Sender: TObject; const Frame: TBytes);
+    procedure DriverOnWriteFrame(Sender: TObject; const Frame: TBytes);
     function GetDataBytes(const Frame: TBytes): TBytes;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    
+    // PT: Define o driver de comunicação a ser usado
+    // EN: Sets the communication driver to be used
     function Connection(Drv: TISOTCPDriver): TPLCStruct;
+    
+    // PT: Configura o endereço do DB (Número, Offset e Tamanho)
+    // EN: Configures the DB address (Number, Offset, and Size)
     function SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCStruct;
+    
+    // PT: Configura a área de memória (ex: DB, Marker, Input, Output)
+    // EN: Sets the memory area (e.g., DB, Marker, Input, Output)
     function SetArea(AArea: TS7Area): TPLCStruct;
+    
+    // PT: Define o intervalo de varredura (leitura automática) em milissegundos
+    // EN: Sets the scan interval (auto-read) in milliseconds
     function SetScanInterval(Value: Integer): TPLCStruct;
+    
+    // PT: Habilita ou desabilita a leitura automática
+    // EN: Enables or disables automatic reading
     function SetAutoRead(Value: Boolean): TPLCStruct;
+    
+    // PT: Executa uma leitura imediata do bloco
+    // EN: Performs an immediate read of the block
     procedure Read;
+    
+    // PT: Escreve o conteúdo atual do buffer (FData) no PLC
+    // EN: Writes the current buffer content (FData) to the PLC
     procedure Write;
+    
+    // PT: Adiciona um ouvinte para notificação de atualização de dados
+    // EN: Adds a listener for data update notifications
     procedure AddListener(Listener: TNotifyEvent);
+    
+    // PT: Remove um ouvinte
+    // EN: Removes a listener
     procedure RemoveListener(Listener: TNotifyEvent);
+    
+    // PT: Lê um byte do buffer local
+    // EN: Reads a byte from the local buffer
     function GetByte(Offset: Integer): Byte;
+    
+    // PT: Escreve um byte no buffer local (não envia ao PLC automaticamente)
+    // EN: Writes a byte to the local buffer (does not send to PLC automatically)
     procedure SetByte(Offset: Integer; Value: Byte);
+    
+    // PT: Lê uma palavra (Word - 2 bytes) do buffer local (Big Endian)
+    // EN: Reads a word (2 bytes) from the local buffer (Big Endian)
     function GetWord(Offset: Integer): Word;
+    
+    // PT: Escreve uma palavra no buffer local
+    // EN: Writes a word to the local buffer
     procedure SetWord(Offset: Integer; Value: Word);
+    
+    // PT: Lê uma palavra dupla (DWord - 4 bytes) do buffer local
+    // EN: Reads a double word (4 bytes) from the local buffer
     function GetDWord(Offset: Integer): LongWord;
+    
+    // PT: Escreve uma palavra dupla no buffer local
+    // EN: Writes a double word to the local buffer
     procedure SetDWord(Offset: Integer; Value: LongWord);
+    
+    // PT: Acesso direto aos dados brutos
+    // EN: Direct access to raw data
     property Data: TBytes read FData;
+
+    // PT: Status da última leitura síncrona
+    // EN: Status of the last synchronous read
+    property LastSyncReadStatus: TProtocolIOResult read FLastSyncReadStatus;
+
+    // PT: Status da última escrita síncrona
+    // EN: Status of the last synchronous write
+    property LastSyncWriteStatus: TProtocolIOResult read FLastSyncWriteStatus;
   end;
 
 implementation
@@ -54,6 +115,8 @@ begin
   inherited Create(AOwner);
   FListeners := TList.Create;
   SetLength(FData, 0);
+  FLastSyncReadStatus := ioNone;
+  FLastSyncWriteStatus := ioNone;
 end;
 
 destructor TPLCStruct.Destroy;
@@ -148,9 +211,11 @@ var
 begin
   if Assigned(FDriver) then
   begin
+    FLastSyncReadStatus := ioBusy;
     pdu := S7PDU.BuildReadVar(FArea, FDB, FOffset, FSize, tsByte);
-    FDriver.SendPDU(pdu, DriverOnFrame);
-  end;
+    FDriver.SendPDU(pdu, DriverOnReadFrame);
+  end else
+    FLastSyncReadStatus := ioNullDriver;
 end;
 
 procedure TPLCStruct.Write;
@@ -159,10 +224,12 @@ var
 begin
   if Assigned(FDriver) and (Length(FData) = FSize) then
   begin
+    FLastSyncWriteStatus := ioBusy;
     pdu := S7PDU.BuildWriteVar(FArea, FDB, FOffset, FSize, tsByte, FData);
-    // Use nil handler for now as we don't process write response deeply yet
-    // Or we could reuse DriverOnFrame if it handled write responses (0x05)
-    FDriver.SendPDU(pdu, nil); 
+    FDriver.SendPDU(pdu, DriverOnWriteFrame);
+  end else begin
+    if not Assigned(FDriver) then FLastSyncWriteStatus := ioNullDriver
+    else FLastSyncWriteStatus := ioDriverError;
   end;
 end;
 
@@ -179,23 +246,36 @@ begin
       Result[i] := 0;
 end;
 
-procedure TPLCStruct.DriverOnFrame(Sender: TObject; const Frame: TBytes);
+procedure TPLCStruct.DriverOnReadFrame(Sender: TObject; const Frame: TBytes);
 var
   i: Integer;
   Method: TMethod;
   NotifyEvent: TNotifyEvent;
 begin
-  if not S7Parser.IsReadResponseOK(Frame) then Exit;
-  FData := GetDataBytes(Frame);
-  
-  // Notify listeners
-  for i := 0 to FListeners.Count - 1 do
+  if S7Parser.IsReadResponseOK(Frame) then
   begin
-    Method := TMethod(FListeners[i]^);
-    NotifyEvent := TNotifyEvent(Method);
-    if Assigned(NotifyEvent) then
-      NotifyEvent(Self);
-  end;
+    FData := GetDataBytes(Frame);
+    FLastSyncReadStatus := ioOk;
+    
+    // Notify listeners
+    for i := 0 to FListeners.Count - 1 do
+    begin
+      Method := TMethod(FListeners[i]^);
+      NotifyEvent := TNotifyEvent(Method);
+      if Assigned(NotifyEvent) then
+        NotifyEvent(Self);
+    end;
+  end
+  else
+    FLastSyncReadStatus := ioCommError;
+end;
+
+procedure TPLCStruct.DriverOnWriteFrame(Sender: TObject; const Frame: TBytes);
+begin
+  if S7Parser.IsWriteResponseOK(Frame) then
+    FLastSyncWriteStatus := ioOk
+  else
+    FLastSyncWriteStatus := ioCommError;
 end;
 
 procedure TPLCStruct.AddListener(Listener: TNotifyEvent);

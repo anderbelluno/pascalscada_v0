@@ -25,6 +25,8 @@ type
     FAutoRead: Boolean;
     FLastValue: string;
     FValueValid: Boolean;
+    FLastSyncReadStatus: TProtocolIOResult;
+    FLastSyncWriteStatus: TProtocolIOResult;
     procedure InternalTimer(Sender: TObject);
     procedure EnsureTimer;
     procedure KillTimer;
@@ -32,6 +34,9 @@ type
     function GetScanInterval: Integer;
     function GetDataBytes(const Frame: TBytes): TBytes;
     procedure DriverOnFrame(Sender: TObject; const Frame: TBytes);
+    procedure DriverOnWriteFrame(Sender: TObject; const Frame: TBytes);
+    function GetLastSyncReadStatus: TProtocolIOResult;
+    function GetLastSyncWriteStatus: TProtocolIOResult;
   public
     constructor Create(AOwner: TComponent); override;
     function Connection(Drv: TISOTCPDriver): TPLCString;
@@ -43,9 +48,22 @@ type
     function SetMemFileDB(DB: Word): TPLCString;
     function SetMemAddress(Offset: LongWord): TPLCString;
     procedure Read;
+    
+    // PT: Escreve uma string no PLC
+    // EN: Writes a string to the PLC
+    procedure Write(const Value: string);
+    
     property OnValueChange: TOnValue  read FOnValueChange write FOnValueChange;
     property ScanInterval: Integer read GetScanInterval write FScanInterval;
     property AutoRead: Boolean read FAutoRead write FAutoRead;
+    
+    // PT: Status da última leitura síncrona
+    // EN: Status of the last synchronous read
+    property LastSyncReadStatus: TProtocolIOResult read GetLastSyncReadStatus;
+    
+    // PT: Status da última escrita síncrona
+    // EN: Status of the last synchronous write
+    property LastSyncWriteStatus: TProtocolIOResult read GetLastSyncWriteStatus;
   end;
 
 implementation
@@ -55,6 +73,8 @@ begin
   inherited Create(AOwner);
   FValueValid := False;
   FLastValue  := '';
+  FLastSyncReadStatus := ioNone;
+  FLastSyncWriteStatus := ioNone;
 end;
 
 procedure TPLCString.InvalidateValue;
@@ -195,8 +215,63 @@ procedure TPLCString.Read;
 var
   pdu: TBytes;
 begin
+  if not Assigned(FDriver) then
+  begin
+    FLastSyncReadStatus := ioNullDriver;
+    Exit;
+  end;
+
+  FLastSyncReadStatus := ioBusy;
   pdu := S7PDU.BuildReadVar(FArea, FDB, FOffset, FSize, tsByte);
   FDriver.SendPDU(pdu, DriverOnFrame);
+end;
+
+procedure TPLCString.Write(const Value: string);
+var
+  pdu, Data: TBytes;
+  Len, MaxLen, i: Integer;
+begin
+  if not Assigned(FDriver) then 
+  begin
+    FLastSyncWriteStatus := ioNullDriver;
+    Exit;
+  end;
+  
+  // S7 String Format:
+  // Byte 0: Max Length
+  // Byte 1: Current Length
+  // Byte 2..n: Characters
+  
+  SetLength(Data, FSize);
+  
+  MaxLen := FSize - 2;
+  if MaxLen < 0 then MaxLen := 0;
+  
+  Len := Length(Value);
+  if Len > MaxLen then
+    Len := MaxLen;
+    
+  Data[0] := MaxLen;
+  Data[1] := Len;
+  
+  for i := 0 to Len - 1 do
+    Data[2 + i] := Ord(Value[i + 1]); // Pascal strings are 1-based
+    
+  // Fill remaining with 0 (optional but cleaner)
+  for i := Len to MaxLen - 1 do
+    Data[2 + i] := 0;
+    
+  FLastSyncWriteStatus := ioBusy;
+  pdu := S7PDU.BuildWriteVar(FArea, FDB, FOffset, FSize, tsByte, Data);
+  FDriver.SendPDU(pdu, DriverOnWriteFrame); 
+end;
+
+procedure TPLCString.DriverOnWriteFrame(Sender: TObject; const Frame: TBytes);
+begin
+  if S7Parser.IsWriteResponseOK(Frame) then
+    FLastSyncWriteStatus := ioOk
+  else
+    FLastSyncWriteStatus := ioCommError;
 end;
 
 procedure TPLCString.DriverOnFrame(Sender: TObject; const Frame: TBytes);
@@ -207,7 +282,13 @@ var
   i: Integer;
 begin
   if not S7Parser.IsReadResponseOK(Frame) then
+  begin
+    FLastSyncReadStatus := ioCommError;
     Exit;
+  end;
+    
+  FLastSyncReadStatus := ioOk;
+  
   data := GetDataBytes(Frame);
   if Length(data) < 2 then
     Exit;
@@ -224,6 +305,16 @@ begin
     if Assigned(FOnValueChange) then
       FOnValueChange(Self, s);
   end;
+end;
+
+function TPLCString.GetLastSyncReadStatus: TProtocolIOResult;
+begin
+  Result := FLastSyncReadStatus;
+end;
+
+function TPLCString.GetLastSyncWriteStatus: TProtocolIOResult;
+begin
+  Result := FLastSyncWriteStatus;
 end;
 
 end.

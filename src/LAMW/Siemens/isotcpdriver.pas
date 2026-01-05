@@ -46,7 +46,7 @@ end;
 
 function TISOTCPDriver.Connect: TISOTCPDriver;
 begin
-  LogD('PLC', 'Driver.Connect');
+  //LogD('PLC', 'Driver.Connect');
   FPort.Connect;
   Result := Self;
 end;
@@ -59,13 +59,13 @@ end;
 
 procedure TISOTCPDriver.SendPDU(const Data: TBytes);
 begin
-  LogD('PLC', 'Driver.SendPDU ' + IntToStr(Length(Data)) + ' bytes');
+  //LogD('PLC', 'Driver.SendPDU ' + IntToStr(Length(Data)) + ' bytes');
   FPort.Send(Data);
 end;
 
 procedure TISOTCPDriver.PortOnFrame(Sender: TObject; const Frame: TBytes);
 begin
-  LogD('PLC', 'Driver.PortOnFrame len=' + IntToStr(Length(Frame)));
+  //LogD('PLC', 'Driver.PortOnFrame len=' + IntToStr(Length(Frame)));
   if Assigned(FOnFrame) then FOnFrame(Self, Frame);
 end;
 

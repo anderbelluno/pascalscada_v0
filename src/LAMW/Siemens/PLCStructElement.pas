@@ -8,6 +8,8 @@ uses
   Classes, SysUtils, PLCStruct, S7Types_Siemens, AndroidLog;
 
 type
+  // PT: Representa um item (variável) dentro de uma estrutura (TPLCStruct)
+  // EN: Represents an item (variable) within a structure (TPLCStruct)
   TPLCStructItem = class(TComponent)
   private
     FStruct: TPLCStruct;
@@ -23,22 +25,75 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    
+    // PT: Associa este item a uma estrutura TPLCStruct pai
+    // EN: Associates this item with a parent TPLCStruct structure
     function SetStruct(AStruct: TPLCStruct): TPLCStructItem;
+    
+    // PT: Define o offset (deslocamento) em bytes dentro da estrutura
+    // EN: Sets the offset (displacement) in bytes within the structure
     function SetOffset(AOffset: Integer): TPLCStructItem;
+    
+    // PT: Define o tipo de dado (Byte, Word, DWord)
+    // EN: Sets the data type (Byte, Word, DWord)
     function SetTagType(AType: TS7TagType): TPLCStructItem;
+    
+    // PT: Define o índice do bit (0-7) para variáveis booleanas
+    // EN: Sets the bit index (0-7) for boolean variables
     function SetBitIndex(Index: Integer): TPLCStructItem;
+    
+    // PT: Retorna o valor interpretado como Booleano
+    // EN: Returns the value interpreted as Boolean
     function GetValueAsBoolean: Boolean;
+    
+    // PT: Retorna o valor interpretado como Inteiro
+    // EN: Returns the value interpreted as Integer
     function GetValueAsInteger: Integer;
+    
+    // PT: Define um valor booleano, atualiza o buffer da estrutura e escreve no PLC
+    // EN: Sets a boolean value, updates the structure buffer, and writes to the PLC
     procedure SetValueAsBoolean(Value: Boolean);
+    
+    // PT: Define um valor inteiro, atualiza o buffer da estrutura e escreve no PLC
+    // EN: Sets an integer value, updates the structure buffer, and writes to the PLC
     procedure SetValueAsInteger(Value: Integer);
+    
+    // PT: Define o offset (alias para SetOffset)
+    // EN: Sets the offset (alias for SetOffset)
     function SetIndex(Value: Integer): TPLCStructItem;
+    
+    // PT: Define a estrutura pai (alias para SetStruct)
+    // EN: Sets the parent structure (alias for SetStruct)
     function SetPLCBlock(Value: TPLCStruct): TPLCStructItem;
+    
+    // PT: Adiciona ouvinte para mudanças de valor
+    // EN: Adds a listener for value changes
     procedure AddListener(Listener: TNotifyEvent);
+    
+    // PT: Remove ouvinte
+    // EN: Removes a listener
     procedure RemoveListener(Listener: TNotifyEvent);
+    
+    // PT: Retorna o status da última leitura síncrona da estrutura
+    // EN: Returns the status of the last synchronous read of the structure
+    function GetLastSyncReadStatus: TProtocolIOResult;
+
+    // PT: Retorna o status da última escrita síncrona da estrutura
+    // EN: Returns the status of the last synchronous write of the structure
+    function GetLastSyncWriteStatus: TProtocolIOResult;
+
     property Index: Integer read FOffset write FOffset;
     property PLCBlock: TPLCStruct read FStruct write FStruct;
     property OnValueChange: TNotifyEvent read FOnValueChange write FOnValueChange;
     property TagType: TS7TagType read FTagType;
+    
+    // PT: Status da última leitura síncrona
+    // EN: Status of the last synchronous read
+    property LastSyncReadStatus: TProtocolIOResult read GetLastSyncReadStatus;
+    
+    // PT: Status da última escrita síncrona
+    // EN: Status of the last synchronous write
+    property LastSyncWriteStatus: TProtocolIOResult read GetLastSyncWriteStatus;
   end;
 
 implementation
@@ -154,7 +209,7 @@ var
 begin
   CurrentValue := GetValueAsInteger;
   
-  LogD('PLCStructItem', 'StructChanged: Offset=' + IntToStr(FOffset) + ' Val=' + IntToStr(CurrentValue) + ' Last=' + IntToStr(FLastValue) + ' Valid=' + BoolToStr(FValueValid, True));
+  //LogD('PLCStructItem', 'StructChanged: Offset=' + IntToStr(FOffset) + ' Val=' + IntToStr(CurrentValue) + ' Last=' + IntToStr(FLastValue) + ' Valid=' + BoolToStr(FValueValid, True));
 
   if (not FValueValid) or (CurrentValue <> FLastValue) then
   begin
@@ -162,7 +217,7 @@ begin
     FLastValue := CurrentValue;
     if Assigned(FOnValueChange) then
     begin
-      LogD('PLCStructItem', 'Triggering OnValueChange');
+      //LogD('PLCStructItem', 'Triggering OnValueChange');
       FOnValueChange(Self);
     end;
     
@@ -192,10 +247,12 @@ function TPLCStructItem.GetValueAsInteger: Integer;
 begin
   if not Assigned(FStruct) then Exit(0);
   case FTagType of
-    pttByte: Result := FStruct.GetByte(FOffset);
-    pttWord: Result := FStruct.GetWord(FOffset);
-    pttDWord: Result := FStruct.GetDWord(FOffset);
-    // Add other types as needed
+    pttShortInt: Result := ShortInt(FStruct.GetByte(FOffset));
+    pttByte:     Result := FStruct.GetByte(FOffset);
+    pttSmallInt, pttInt: Result := SmallInt(FStruct.GetWord(FOffset));
+    pttWord:     Result := FStruct.GetWord(FOffset);
+    pttLongInt, pttDInt: Result := LongInt(FStruct.GetDWord(FOffset));
+    pttDWord:    Result := LongInt(FStruct.GetDWord(FOffset)); // Cast to Integer (signed 32-bit in Pascal usually)
     else Result := 0;
   end;
 end;
@@ -225,13 +282,28 @@ begin
   if not Assigned(FStruct) then Exit;
   
   case FTagType of
-    pttByte: FStruct.SetByte(FOffset, Value);
-    pttWord: FStruct.SetWord(FOffset, Value);
-    pttDWord: FStruct.SetDWord(FOffset, Value);
-    // Add other types as needed
+    pttShortInt, pttByte: FStruct.SetByte(FOffset, Byte(Value));
+    pttSmallInt, pttInt, pttWord: FStruct.SetWord(FOffset, Word(Value));
+    pttLongInt, pttDInt, pttDWord: FStruct.SetDWord(FOffset, LongWord(Value));
   end;
   
   FStruct.Write;
+end;
+
+function TPLCStructItem.GetLastSyncReadStatus: TProtocolIOResult;
+begin
+  if Assigned(FStruct) then
+    Result := FStruct.LastSyncReadStatus
+  else
+    Result := ioNullTagBlock;
+end;
+
+function TPLCStructItem.GetLastSyncWriteStatus: TProtocolIOResult;
+begin
+  if Assigned(FStruct) then
+    Result := FStruct.LastSyncWriteStatus
+  else
+    Result := ioNullTagBlock;
 end;
 
 end.

@@ -1545,6 +1545,13 @@ public  java.lang.Object jPanel_Create(long pasobj ) {
   return (java.lang.Object)(new jPanel(this.activity,this,pasobj));
 }
 
+public java.lang.Object jScrollView_jCreate(long _Self, int _innerLayout) {
+  return (java.lang.Object)(new jScrollView(this,_Self,_innerLayout));
+}
+public native void pOnScrollViewChanged(long pasobj, int currenthorizontal, int currentVertical, int previousHorizontal, int previousVertical, int onPosition, int scrolldiff);
+public native void pOnScrollViewInnerItemClick(long pasobj, int itemId);
+public native void pOnScrollViewInnerItemLongClick(long pasobj, int index, int itemId);
+
 public java.lang.Object jSwitchButton_jCreate(long _Self) {
    return (java.lang.Object)(new jSwitchButton(this,_Self));
 }

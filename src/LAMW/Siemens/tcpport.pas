@@ -23,12 +23,14 @@ type
     FSlot: Integer;
     FConnType: Byte; // 1=PG, 2=OP
     FOnS7Connected: TNotifyEvent;
+    FOnS7Disconnected: TNotifyEvent;
     FOwnsSocket: Boolean;
     function GetInitialized: Boolean;
     procedure SocketConnected(Sender: TObject);
     procedure SocketDisconnected(Sender: TObject);
     procedure TransportFrameReceived(Sender: TObject; const Frame: TBytes);
     procedure TransportS7Connected(Sender: TObject);
+    procedure TransportS7Disconnected(Sender: TObject);
     procedure SetConnType(Value: Byte);
   public
     constructor Create(AOwner: TComponent; ASocket: jTCPSocketClient = nil); reintroduce;
@@ -42,6 +44,7 @@ type
     property Port: Integer read FPort write FPort;
     property OnFrameReceived: TS7FrameReceived read FOnFrame write FOnFrame;
     property OnS7Connected: TNotifyEvent read FOnS7Connected write FOnS7Connected;
+    property OnS7Disconnected: TNotifyEvent read FOnS7Disconnected write FOnS7Disconnected;
     property Rack: Integer read FRack write FRack;
     property Slot: Integer read FSlot write FSlot;
     property ConnType: Byte read FConnType write SetConnType;
@@ -73,6 +76,7 @@ begin
   else
   begin
     FSocket := jTCPSocketClient.Create(AOwner); // Use AOwner (Form) to ensure Context
+    FSocket.Init;
     FOwnsSocket := True;
   end;
 
@@ -84,6 +88,7 @@ begin
   FTransport := TS7Transport.Create(Self, FSocket);
   FTransport.OnFrameReceived := TransportFrameReceived;
   FTransport.OnS7Connected := TransportS7Connected;
+  FTransport.OnS7Disconnected := TransportS7Disconnected;
 
   // 3. Defaults
   FRack := 0;
@@ -121,7 +126,7 @@ procedure TPortTCP.Connect;
 begin
   if (FHost = '') or (FPort = 0) then
   begin
-    AndroidLog.LogD('PLC', 'Error: Host or Port not set');
+    //AndroidLog.LogD('PLC', 'Error: Host or Port not set');
     Exit;
   end;
 
@@ -129,7 +134,7 @@ begin
   if Assigned(FTransport) then
     FTransport.SetTSAP($0100, (FConnType shl 8) + ((FRack shl 5) + FSlot));
 
-  AndroidLog.LogD('PLC', 'Connecting to ' + FHost + ':' + IntToStr(FPort));
+  //AndroidLog.LogD('PLC', 'Connecting to ' + FHost + ':' + IntToStr(FPort));
   FSocket.ConnectAsync(FHost, FPort);
 end;
 
@@ -137,6 +142,10 @@ procedure TPortTCP.Disconnect;
 begin
   if Assigned(FSocket) and FSocket.IsConnected then
     FSocket.CloseConnection;
+
+  // Garante o disparo do evento de desconexão para atualizar a UI/Lógica
+  // Isso cobre casos onde o CloseConnection não dispara o evento OnDisconnected
+  TransportS7Disconnected(Self);
 end;
 
 procedure TPortTCP.StartHandshake;
@@ -153,7 +162,7 @@ end;
 
 procedure TPortTCP.SocketConnected(Sender: TObject);
 begin
-  AndroidLog.LogD('PLC', 'Socket Connected');
+  //AndroidLog.LogD('PLC', 'Socket Connected');
   // Initiate S7 Handshake immediately after TCP connection
   if Assigned(FTransport) then
     FTransport.StartHandshake;
@@ -161,7 +170,8 @@ end;
 
 procedure TPortTCP.SocketDisconnected(Sender: TObject);
 begin
-  AndroidLog.LogD('PLC', 'Socket Disconnected');
+  //AndroidLog.LogD('PLC', 'Socket Disconnected');
+  TransportS7Disconnected(Self);
 end;
 
 procedure TPortTCP.TransportFrameReceived(Sender: TObject; const Frame: TBytes);
@@ -173,10 +183,16 @@ end;
 
 procedure TPortTCP.TransportS7Connected(Sender: TObject);
 begin
-  AndroidLog.LogD('PLC', 'S7 Protocol Connected');
+  //AndroidLog.LogD('PLC', 'S7 Protocol Connected');
   // Forward Connection Event to Driver/User
   if Assigned(FOnS7Connected) then
     FOnS7Connected(Self);
+end;
+
+procedure TPortTCP.TransportS7Disconnected(Sender: TObject);
+begin
+  if Assigned(FOnS7Disconnected) then
+     FOnS7Disconnected(Self);
 end;
 
 function TPortTCP.GetInitialized: Boolean;

@@ -7,7 +7,12 @@ interface
 uses
   Classes, SysUtils, S7Types_Siemens, AndroidLog;
 
+// PT: Constrói o pacote PDU para leitura de variáveis do PLC (Function 0x04 Read Var)
+// EN: Builds the PDU packet for reading PLC variables (Function 0x04 Read Var)
 function BuildReadVar(Area: TS7Area; DBNum: Word; ByteOffset: LongWord; SizeBytes: Word; TSize: TS7TransportSize): TBytes;
+
+// PT: Constrói o pacote PDU para escrita de variáveis no PLC (Function 0x05 Write Var)
+// EN: Builds the PDU packet for writing PLC variables (Function 0x05 Write Var)
 function BuildWriteVar(Area: TS7Area; DBNum: Word; ByteOffset: LongWord; SizeBytes: Word; TSize: TS7TransportSize; const Data: TBytes): TBytes;
 
 implementation
@@ -81,8 +86,8 @@ begin
   // Copy Data
   Move(Data[0], Result[18], DataLen);
   
-  LogD('PLC', 'DEBUG_WRITE_PDU: Area=' + IntToHex(AreaCode,2) + ' DB=' + IntToHex(DBNum,4) + 
-              ' Addr=' + IntToHex(Addr,8) + ' Len=' + IntToStr(DataLen));
+  //LogD('PLC', 'DEBUG_WRITE_PDU: Area=' + IntToHex(AreaCode,2) + ' DB=' + IntToHex(DBNum,4) + 
+  //            ' Addr=' + IntToHex(Addr,8) + ' Len=' + IntToStr(DataLen));
 end;
 
 function BuildReadVar(Area: TS7Area; DBNum: Word; ByteOffset: LongWord; SizeBytes: Word; TSize: TS7TransportSize): TBytes;
@@ -122,10 +127,10 @@ begin
   Result[12] := (Addr shr 8) and $FF;      // Addr byte 1
   Result[13] := Addr and $FF;              // Addr byte 0
   
-  LogD('PLC', 'DEBUG_PDU: Area=' + IntToHex(AreaCode,2) + ' DB=' + IntToHex(DBNum,4) +
-              ' Addr=' + IntToHex(Addr,8) + ' Size=' + IntToStr(SizeBytes) + ' TS=' + IntToHex(TS,2));
+  //LogD('PLC', 'DEBUG_PDU: Area=' + IntToHex(AreaCode,2) + ' DB=' + IntToHex(DBNum,4) +
+  //            ' Addr=' + IntToHex(Addr,8) + ' Size=' + IntToStr(SizeBytes) + ' TS=' + IntToHex(TS,2));
               
-  LogD('PLC', 'DEBUG_PDU_BYTES: ' + HexStr(Result)); // Using HexStr from S7Parser/AndroidLog if available or just raw hex loop
+  //LogD('PLC', 'DEBUG_PDU_BYTES: ' + HexStr(Result)); // Using HexStr from S7Parser/AndroidLog if available or just raw hex loop
 end;
 
 end.

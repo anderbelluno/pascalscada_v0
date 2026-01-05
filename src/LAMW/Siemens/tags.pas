@@ -22,6 +22,8 @@ type
   TOnValueDInt  = procedure(Sender: TObject; Value: LongInt) of object;
   TOnValueReal  = procedure(Sender: TObject; Value: Single) of object;
 
+  // PT: Classe base para tags numéricos do PLC
+  // EN: Base class for numeric PLC tags
   TPLCTagNumber = class(TComponent)
   private
     FDriver: TISOTCPDriver;
@@ -50,6 +52,8 @@ type
     FAutoRead: Boolean;
     FLastValue: string;
     FValueValid: Boolean;
+    FLastSyncReadStatus: TProtocolIOResult;
+    FLastSyncWriteStatus: TProtocolIOResult;
     procedure InternalTimer(Sender: TObject);
     procedure EnsureTimer;
     procedure KillTimer;
@@ -58,17 +62,42 @@ type
     function GetDataBytes(const Frame: TBytes): TBytes;
     procedure ApplySwaps(var Data: TBytes);
     procedure DriverOnFrame(Sender: TObject; const Frame: TBytes);
+    procedure DriverOnWriteFrame(Sender: TObject; const Frame: TBytes);
+  protected
+    function GetLastSyncReadStatus: TProtocolIOResult; virtual;
+    function GetLastSyncWriteStatus: TProtocolIOResult; virtual;
   public
     constructor Create(AOwner: TComponent); override;
+    
+    // PT: Define o driver de comunicação
+    // EN: Sets the communication driver
     function Connection(Drv: TISOTCPDriver): TPLCTagNumber;
+    
+    // PT: Configura endereço DB (Sobrecarga sem Tamanho)
+    // EN: Configures DB address (Overload without Size)
     function SetDB(ADB: Word; AOffset: LongWord): TPLCTagNumber; overload;
+    
+    // PT: Configura endereço DB completo
+    // EN: Configures complete DB address
     function SetDB(ADB: Word; AOffset: LongWord; ASize: Word): TPLCTagNumber;
+    
+    // PT: Configura área de memória
+    // EN: Configures memory area
     function SetArea(AArea: TS7Area): TPLCTagNumber;
+    
+    // PT: Define tamanho de transporte S7
+    // EN: Sets S7 transport size
     function SetTransportSize(ATS: TS7TransportSize): TPLCTagNumber;
+    
+    // PT: Define tipo do tag (Byte, Word, etc.)
+    // EN: Sets tag type (Byte, Word, etc.)
     function SetTagType(AType: TS7TagType): TPLCTagNumber;
     procedure SetTagTypeProp(Value: TS7TagType);
     procedure SetScanIntervalProp(Value: Integer);
     procedure SetAutoReadProp(Value: Boolean);
+    
+    // PT: Define tipo numérico (Enum PascalSCADA)
+    // EN: Sets numeric kind (PascalSCADA Enum)
     function SetKind(AKind: TPLCNumberKind): TPLCTagNumber; overload;
     function SetKind(AType: TS7TagType): TPLCTagNumber; overload;
     function SetmKind(AType: TS7TagType): TPLCTagNumber; overload;
@@ -82,7 +111,27 @@ type
     function SetMemFileDB(DB: Word): TPLCTagNumber;
     function SetMemAddress(Offset: LongWord): TPLCTagNumber;
     function SetBitIndex(AIndex: Integer): TPLCTagNumber;
+    
+    // PT: Executa leitura
+    // EN: Performs read
     procedure Read;
+
+    // PT: Escreve um valor inteiro
+    // EN: Writes an integer value
+    procedure Write(Value: Integer); overload;
+
+    // PT: Escreve um valor Int64
+    // EN: Writes an Int64 value
+    procedure Write(Value: Int64); overload;
+
+    // PT: Escreve um valor Ponto Flutuante
+    // EN: Writes a Floating Point value
+    procedure Write(Value: Double); overload;
+
+    // PT: Escreve um valor Booleano
+    // EN: Writes a Boolean value
+    procedure Write(Value: Boolean); overload;
+    
     property OnValueBool:  TOnValueBool  read FOnValueBool  write FOnValueBool;
     property OnValueByte:  TOnValueByte  read FOnValueByte  write FOnValueByte;
     property OnValueWord:  TOnValueWord  read FOnValueWord  write FOnValueWord;
@@ -101,8 +150,18 @@ type
     property MemFile_DB: Word read FDB write FDB;
     property MemAddress: LongWord read FOffset write FOffset;
     property TagType: TS7TagType read FTagType write SetTagTypeProp;
+    
+    // PT: Status da última leitura síncrona
+    // EN: Status of the last synchronous read
+    property LastSyncReadStatus: TProtocolIOResult read GetLastSyncReadStatus;
+    
+    // PT: Status da última escrita síncrona
+    // EN: Status of the last synchronous write
+    property LastSyncWriteStatus: TProtocolIOResult read GetLastSyncWriteStatus;
   end;
 
+  // PT: Classe especializada para manipulação de bits dentro de palavras (Word/Byte)
+  // EN: Specialized class for bit manipulation within words (Word/Byte)
   TTagBit = class(TPLCTagNumber)
   private
     FStructItem: TPLCStructItem;
@@ -115,16 +174,42 @@ type
     procedure SetAsBoolean(Value: Boolean);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    function GetLastSyncReadStatus: TProtocolIOResult; override;
+    function GetLastSyncWriteStatus: TProtocolIOResult; override;
   public
+    // PT: Define um único bit para leitura/escrita
+    // EN: Sets a single bit for read/write
     function SetBit(AIndex: Integer): TTagBit;
+    
+    // PT: Define o bit inicial da faixa
+    // EN: Sets the start bit of the range
     function SetStartBit(Value: Integer): TTagBit;
+    
+    // PT: Define o bit final da faixa
+    // EN: Sets the end bit of the range
     function SetEndBit(Value: Integer): TTagBit;
+    
     procedure SetStartBitProp(Value: Integer);
     procedure SetEndBitProp(Value: Integer);
+    
+    // PT: Conecta este TagBit a um item de estrutura (TPLCStructItem)
+    // EN: Connects this TagBit to a structure item (TPLCStructItem)
     function ConnectToStructItem(AItem: TPLCStructItem): TTagBit;
+    
+    // PT: Propriedade para definir o bit inicial (0-15)
+    // EN: Property to set the start bit (0-15)
     property StartBit: Integer read FStartBit write SetStartBitProp;
+    
+    // PT: Propriedade para definir o bit final
+    // EN: Property to set the end bit
     property EndBit: Integer read FEndBit write SetEndBitProp;
+    
+    // PT: Valor inteiro dos bits extraídos. Ao escrever, modifica os bits no PLC.
+    // EN: Integer value of extracted bits. Writing modifies bits in the PLC.
     property Value: Integer read GetValue write SetValue;
+    
+    // PT: Valor booleano (True se Value > 0). Ao escrever, modifica o bit no PLC.
+    // EN: Boolean value (True if Value > 0). Writing modifies the bit in the PLC.
     property AsBoolean: Boolean read GetAsBoolean write SetAsBoolean;
     destructor Destroy; override;
   end;
@@ -136,6 +221,8 @@ begin
   inherited Create(AOwner);
   FValueValid := False;
   FLastValue  := '';
+  FLastSyncReadStatus := ioNone;
+  FLastSyncWriteStatus := ioNone;
 end;
 
 procedure TPLCTagNumber.InvalidateValue;
@@ -490,13 +577,153 @@ begin
   Result := Self;
 end;
 
+procedure TPLCTagNumber.Write(Value: Integer);
+var
+  Data: TBytes;
+begin
+  if not Assigned(FDriver) then
+  begin
+    FLastSyncWriteStatus := ioNullDriver;
+    Exit;
+  end;
+  
+  SetLength(Data, FSize);
+  
+  // Construct Big Endian Data
+  case FTagType of
+    pttByte, pttShortInt:
+      Data[0] := Byte(Value);
+    pttWord, pttInt, pttSmallInt:
+      begin
+        Data[0] := (Value shr 8) and $FF;
+        Data[1] := Value and $FF;
+      end;
+    pttDWord, pttDInt, pttLongInt:
+      begin
+        Data[0] := (Value shr 24) and $FF;
+        Data[1] := (Value shr 16) and $FF;
+        Data[2] := (Value shr 8) and $FF;
+        Data[3] := Value and $FF;
+      end;
+    else
+      Exit; 
+  end;
+  
+  ApplySwaps(Data);
+  FLastSyncWriteStatus := ioBusy;
+  FDriver.SendPDU(S7PDU.BuildWriteVar(FArea, FDB, FOffset, FSize, FTS, Data), DriverOnWriteFrame);
+end;
+
+procedure TPLCTagNumber.Write(Value: Int64);
+var
+  Data: TBytes;
+begin
+  if not Assigned(FDriver) then 
+  begin
+    FLastSyncWriteStatus := ioNullDriver;
+    Exit;
+  end;
+  if FSize <> 8 then Exit;
+  
+  SetLength(Data, 8);
+  Data[0] := (Value shr 56) and $FF;
+  Data[1] := (Value shr 48) and $FF;
+  Data[2] := (Value shr 40) and $FF;
+  Data[3] := (Value shr 32) and $FF;
+  Data[4] := (Value shr 24) and $FF;
+  Data[5] := (Value shr 16) and $FF;
+  Data[6] := (Value shr 8) and $FF;
+  Data[7] := Value and $FF;
+  
+  ApplySwaps(Data);
+  FLastSyncWriteStatus := ioBusy;
+  FDriver.SendPDU(S7PDU.BuildWriteVar(FArea, FDB, FOffset, FSize, FTS, Data), DriverOnWriteFrame);
+end;
+
+procedure TPLCTagNumber.Write(Value: Double);
+var
+  Data: TBytes;
+  s: Single;
+  d: Double;
+  u32: LongWord;
+  u64: QWord;
+begin
+  if not Assigned(FDriver) then 
+  begin
+    FLastSyncWriteStatus := ioNullDriver;
+    Exit;
+  end;
+  SetLength(Data, FSize);
+  
+  if FTagType = pttFloat then
+  begin
+    s := Value;
+    u32 := PLongWord(@s)^;
+    // Swap Little Endian (Native) to Big Endian
+    Data[0] := (u32 shr 24) and $FF;
+    Data[1] := (u32 shr 16) and $FF;
+    Data[2] := (u32 shr 8) and $FF;
+    Data[3] := u32 and $FF;
+  end
+  else if (FTagType = pttDouble) then
+  begin
+    d := Value;
+    u64 := PQWord(@d)^;
+    // Swap Little Endian (Native) to Big Endian
+    Data[0] := (u64 shr 56) and $FF;
+    Data[1] := (u64 shr 48) and $FF;
+    Data[2] := (u64 shr 40) and $FF;
+    Data[3] := (u64 shr 32) and $FF;
+    Data[4] := (u64 shr 24) and $FF;
+    Data[5] := (u64 shr 16) and $FF;
+    Data[6] := (u64 shr 8) and $FF;
+    Data[7] := u64 and $FF;
+  end
+  else Exit;
+  
+  ApplySwaps(Data);
+  FLastSyncWriteStatus := ioBusy;
+  FDriver.SendPDU(S7PDU.BuildWriteVar(FArea, FDB, FOffset, FSize, FTS, Data), DriverOnWriteFrame);
+end;
+
+procedure TPLCTagNumber.Write(Value: Boolean);
+var
+  Data: TBytes;
+begin
+  if not Assigned(FDriver) then 
+  begin
+    FLastSyncWriteStatus := ioNullDriver;
+    Exit;
+  end;
+  if FTagType <> pttBool then Exit;
+  
+  SetLength(Data, 1);
+  if Value then Data[0] := 1 else Data[0] := 0;
+  
+  FLastSyncWriteStatus := ioBusy;
+  FDriver.SendPDU(S7PDU.BuildWriteVar(FArea, FDB, FOffset, FSize, FTS, Data), DriverOnWriteFrame);
+end;
+
+procedure TPLCTagNumber.DriverOnWriteFrame(Sender: TObject; const Frame: TBytes);
+begin
+  if S7Parser.IsWriteResponseOK(Frame) then
+    FLastSyncWriteStatus := ioOk
+  else
+    FLastSyncWriteStatus := ioCommError;
+end;
+
 procedure TPLCTagNumber.Read;
 var
   pdu: TBytes;
 begin
-  LogD('PLC', 'Tag.Read area=' + IntToStr(Ord(FArea)) + ' DB=' + IntToStr(FDB) + ' Off=' + IntToStr(FOffset) + ' Size=' + IntToStr(FSize));
-  pdu := S7PDU.BuildReadVar(FArea, FDB, FOffset, FSize, FTS);
-  FDriver.SendPDU(pdu, DriverOnFrame);
+  if Assigned(FDriver) then
+  begin
+    FLastSyncReadStatus := ioBusy;
+    //LogD('PLC', 'Tag.Read area=' + IntToStr(Ord(FArea)) + ' DB=' + IntToStr(FDB) + ' Off=' + IntToStr(FOffset) + ' Size=' + IntToStr(FSize));
+    pdu := S7PDU.BuildReadVar(FArea, FDB, FOffset, FSize, FTS);
+    FDriver.SendPDU(pdu, DriverOnFrame);
+  end else
+    FLastSyncReadStatus := ioNullDriver;
 end;
 
 procedure TPLCTagNumber.DriverOnFrame(Sender: TObject; const Frame: TBytes);
@@ -517,11 +744,16 @@ var
 begin
   st := 0; if Length(Frame) > 13 then
     st := Frame[13];
-  LogD('PLC', 'DriverOnFrame status=' + IntToStr(st) + ' len=' + IntToStr(Length(Frame)));
+  //LogD('PLC', 'DriverOnFrame status=' + IntToStr(st) + ' len=' + IntToStr(Length(Frame)));
   
   // Analyze frame for errors. If not a valid Read Response (e.g. Setup Confirm), exit.
   if not S7Parser.IsReadResponseOK(Frame) then
+  begin
+    FLastSyncReadStatus := ioCommError;
     Exit;
+  end;
+
+  FLastSyncReadStatus := ioOk;
   
   ValStr := '';
   
@@ -872,6 +1104,32 @@ begin
     end;
     Exit;
   end;
+end;
+
+function TPLCTagNumber.GetLastSyncReadStatus: TProtocolIOResult;
+begin
+  Result := FLastSyncReadStatus;
+end;
+
+function TPLCTagNumber.GetLastSyncWriteStatus: TProtocolIOResult;
+begin
+  Result := FLastSyncWriteStatus;
+end;
+
+function TTagBit.GetLastSyncReadStatus: TProtocolIOResult;
+begin
+  if Assigned(FStructItem) then
+    Result := FStructItem.LastSyncReadStatus
+  else
+    Result := inherited GetLastSyncReadStatus;
+end;
+
+function TTagBit.GetLastSyncWriteStatus: TProtocolIOResult;
+begin
+  if Assigned(FStructItem) then
+    Result := FStructItem.LastSyncWriteStatus
+  else
+    Result := inherited GetLastSyncWriteStatus;
 end;
 
 end.

@@ -17,8 +17,12 @@ type
     btnConnect: jButton;
     EditText1: jEditText;
     EditText2: jEditText;
+    EditText3: jEditText;
+    EditText4: jEditText;
     Panel1: jPanel;
     Panel2: jPanel;
+    Panel3: jPanel;
+    ScrollView1: jScrollView;
     SwitchButton1: jSwitchButton;
     SwitchButton2: jSwitchButton;
     TCPSocketClient1: jTCPSocketClient;
@@ -29,8 +33,12 @@ type
     procedure AndroidModule1Destroy(Sender: TObject);
     procedure AndroidModule1JNIPrompt(Sender: TObject);
     procedure btnConnectClick(Sender: TObject);
+    procedure EditText3LostFocus(Sender: TObject; textContent: string);
+    procedure EditText4LostFocus(Sender: TObject; textContent: string);
     procedure OnS7Connected(Sender: TObject);
-    procedure OnTagUpdated(Sender: TObject; const ValueText: string);
+    procedure onS7Disconneted(Sender: TObject);
+    procedure OnStringUpdated(Sender: TObject; const ValueText: string);
+    procedure OnNumberUpdated(Sender: TObject; const ValueText: string);
     procedure OnTagBitUpdated(Sender: TObject; Value: Boolean);
     procedure OnTagBitUpdated2(Sender: TObject; Value: Boolean);
     procedure OnStructItemUpdated(Sender: TObject);
@@ -38,14 +46,35 @@ type
     procedure SwitchButton2Toggle(Sender: TObject; isStateOn: boolean);
     procedure Timer1Timer(Sender: TObject);
   private
+    // PT: Gerenciador de conexão TCP de baixo nível
+    // EN: Low-level TCP connection manager
     PortTCP: TPortTCP;
+    
+    // PT: Driver S7 ISO-TCP (Protocolo Siemens)
+    // EN: S7 ISO-TCP Driver (Siemens Protocol)
     Driver: TISOTCPDriver;
+    
+    // PT: Tag para leitura de números (Inteiros)
+    // EN: Tag for reading numbers (Integers)
     ReadNumber: TPLCTagNumber;
+    
+    // PT: Tag para leitura de Strings
+    // EN: Tag for reading Strings
     ReadText: TPLCString;
+    
+    // PT: Tags para leitura/escrita de bits individuais
+    // EN: Tags for reading/writing individual bits
     ReadBit: TTagBit;
     ReadBit1 : TTagBit;
+    
+    // PT: Estrutura para leitura em bloco (melhor performance)
+    // EN: Structure for block reading (better performance)
     MyStruct: TPLCStruct;
+    
+    // PT: Item mapeado dentro da estrutura
+    // EN: Item mapped within the structure
     MyStructItem: TPLCStructItem;
+    
     FS7Ready: Boolean;
     PiscaPisca: Integer;
   end;
@@ -61,15 +90,37 @@ implementation
 
 procedure TAndroidModule1.OnS7Connected(Sender: TObject);
 begin
+  LogD('ANDERSON','S7 Connected');
   TextView1.AppendLn('S7 Connected');
   FS7Ready := True;
   Panel1.BackgroundColor := colbrGreen;
+  btnConnect.Tag:= 1;
+  btnConnect.Text:= 'Desconectar';
   Timer1.Enabled := True;
 end;
 
-procedure TAndroidModule1.OnTagUpdated(Sender: TObject; const ValueText: string);
+procedure TAndroidModule1.onS7Disconneted(Sender: TObject);
+begin
+  LogD('ANDERSON','S7 Disconnected');
+  TextView1.AppendLn('S7 Disconnected');
+  FS7Ready := False;
+  btnConnect.Tag:= 0;
+  btnConnect.Text:= 'Conectar';
+  Timer1.Enabled:= True;
+end;
+
+procedure TAndroidModule1.OnStringUpdated(Sender: TObject;
+  const ValueText: string);
+begin
+   TextView1.AppendLn('Valor lido: ' + ValueText);
+   EditText3.Text := ValueText;
+end;
+
+procedure TAndroidModule1.OnNumberUpdated(Sender: TObject;
+  const ValueText: string);
 begin
   TextView1.AppendLn('Valor lido: ' + ValueText);
+  EditText4.Text:= ValueText;
 end;
 
 procedure TAndroidModule1.OnTagBitUpdated(Sender: TObject; Value: Boolean);
@@ -111,13 +162,37 @@ end;
 procedure TAndroidModule1.SwitchButton1Toggle(Sender: TObject;
   isStateOn: boolean);
 begin
-  ReadBit.AsBoolean := isStateOn;
+  // Example 1: Write to Bit (Existing)
+  if Assigned(ReadBit) then
+    ReadBit.AsBoolean := isStateOn;
+    
+  // Example 2: Write to Number (ReadNumber)
+  // Escreve 1234 quando LIGADO, 0 quando DESLIGADO
+{  if Assigned(ReadNumber) then
+  begin
+    if isStateOn then
+      ReadNumber.Write(1234)
+    else
+      ReadNumber.Write(0);
+  end; }
 end;
 
 procedure TAndroidModule1.SwitchButton2Toggle(Sender: TObject;
   isStateOn: boolean);
 begin
-  ReadBit1.AsBoolean := isStateOn;
+  // Example 1: Write to Bit (Existing)
+  if Assigned(ReadBit1) then
+    ReadBit1.AsBoolean := isStateOn;
+
+  // Example 2: Write to String (ReadText)
+  // Escreve texto diferente dependendo do estado
+ { if Assigned(ReadText) then
+  begin
+    if isStateOn then
+      ReadText.Write('LAMW Rocks!')
+    else
+      ReadText.Write('PascalSCADA');
+  end;  }
 end;
 
 procedure TAndroidModule1.AndroidModule1Destroy(Sender: TObject);
@@ -143,76 +218,141 @@ end;
 procedure TAndroidModule1.AndroidModule1JNIPrompt(Sender: TObject);
 begin
   FS7Ready := False;
-  TextView1.AppendLn('OnJNIPrompt');
+ // TextView1.AppendLn('OnJNIPrompt');
   TextView1.SetVerticalScrollBarEnabled(True);
+  TextView1.SetScrollingMovementMethod();
   SetDebugLogging(True);
   Timer1.Enabled := True;
 end;
 
 procedure TAndroidModule1.btnConnectClick(Sender: TObject);
 begin
-  if not FS7Ready then
+  // Se o botão estiver em estado de "Conectar" (Tag = 0)
+  LogD('ANDERSON','Tag ' + IntToStr(btnConnect.Tag));
+  LogD('ANDERSON','FS7Ready: ' + BoolToStr(FS7Ready, True));
+
+  TextView1.Text:= '';
+
+  if btnConnect.Tag = 0 then
   begin
-    TextView1.AppendLn('Conectando...');
-    PortTCP := TPortTCP.Create(Self, TCPSocketClient1);
-    PortTCP.Rack := 0;
-    PortTCP.Slot := 0;
-    PortTCP.ConnType := 2;
+      // Recriar Driver e PortTCP para garantir Socket novo
+      // O componente TCPSocketClient pode não suportar reconexão após close
+      if Assigned(Driver) then
+      begin
+        Driver.Free;
+        Driver := nil;
+      end;
 
-    Driver := TISOTCPDriver.Create(Self, PortTCP);
-    Driver.SetHost('192.168.1.70');
-    Driver.SetPort(102);
-    Driver.OnS7Connected := OnS7Connected;
+      if Assigned(PortTCP) then
+      begin
+        PortTCP.Free;
+        PortTCP := nil;
+      end;
 
-    ReadNumber := TPLCTagNumber.Create(Self);
-    ReadNumber.Connection(Driver)
-              .SetScanInterval(1100)
-              .SetAutoRead(True)
-              .SetMemReadFunction(4)  // DB
-              .SetMemFileDB(1)        // DB1
-              .SetMemAddress(2)       // Offset 2
-              .SetKind(pttSmallInt);  // Equivalente ao PascalSCADA para Int
-    ReadNumber.OnValueChange := OnTagUpdated;
+      // Cria Socket Interno (passando nil)
+      PortTCP := TPortTCP.Create(Self, nil);
+      PortTCP.Rack := 0;
+      PortTCP.Slot := 0;
+      PortTCP.ConnType := 2; // OP
 
-    ReadText := TPLCString.Create(Self);
-    ReadText.Connection(Driver)
-             .SetScanInterval(900)
-             .SetAutoRead(True)
-             .SetMemReadFunction(4)
-             .SetDB(1, 4, 52);
-    ReadText.OnValueChange := OnTagUpdated;
+      Driver := TISOTCPDriver.Create(Self, PortTCP);
+      Driver.SetHost('192.168.1.70');
+      Driver.SetPort(102);
+      Driver.OnS7Connected := OnS7Connected;
+      Driver.OnS7Disconnected:= onS7Disconneted;
 
-    MyStruct := TPLCStruct.Create(Self);
-    MyStruct.Connection(Driver)
-            .SetScanInterval(1500)
-            .SetAutoRead(True)
-            .SetDB(1, 58, 10);
+      // Tags: Cria se não existir, e atualiza conexão
+      if not Assigned(ReadNumber) then
+      begin
+        ReadNumber := TPLCTagNumber.Create(Self);
+        ReadNumber.SetScanInterval(1100)
+                  .SetAutoRead(True)
+                  .SetMemReadFunction(4)  // DB
+                  .SetMemFileDB(1)        // DB1
+                  .SetMemAddress(2)       // Offset 2
+                  .SetKind(pttSmallInt);  // Equivalente ao PascalSCADA para Int
+        ReadNumber.OnValueChange := OnNumberUpdated;
+      end;
+      ReadNumber.Connection(Driver);
 
-    MyStructItem := TPLCStructItem.Create(Self);
-    MyStructItem.SetStruct(MyStruct)
-                .SetIndex(0)
-                .SetTagType(pttByte);
-   // MyStructItem.OnValueChange := OnStructItemUpdated;
+      if not Assigned(ReadText) then
+      begin
+        ReadText := TPLCString.Create(Self);
+        ReadText.SetScanInterval(900)
+                 .SetAutoRead(True)
+                 .SetMemReadFunction(4)
+                 .SetDB(1, 4, 52);
+        ReadText.OnValueChange := OnStringUpdated;
+      end;
+      ReadText.Connection(Driver);
 
-    ReadBit := TTagBit.Create(Self);
-    ReadBit.ConnectToStructItem(MyStructItem)
-           .SetStartBit(0)
-           .SetEndBit(0);
-    ReadBit.OnValueBool := OnTagBitUpdated;
+      if not Assigned(MyStruct) then
+      begin
+        MyStruct := TPLCStruct.Create(Self);
+        MyStruct.SetScanInterval(1500)
+                .SetAutoRead(True)
+                .SetDB(1, 58, 10);
+      end;
+      MyStruct.Connection(Driver);
 
-    ReadBit1 := TTagBit.Create(Self);
-    ReadBit1.ConnectToStructItem(MyStructItem)
-           .SetStartBit(1)
-           .SetEndBit(1);
-    ReadBit1.OnValueBool := OnTagBitUpdated2;
+      if not Assigned(MyStructItem) then
+      begin
+        MyStructItem := TPLCStructItem.Create(Self);
+        MyStructItem.SetStruct(MyStruct)
+                    .SetIndex(0)
+                    .SetTagType(pttByte);
+       // MyStructItem.OnValueChange := OnStructItemUpdated;
+      end;
 
-    Driver.Connect;
+      if not Assigned(ReadBit) then
+      begin
+        ReadBit := TTagBit.Create(Self);
+        ReadBit.ConnectToStructItem(MyStructItem)
+               .SetStartBit(0)
+               .SetEndBit(0);
+        ReadBit.OnValueBool := OnTagBitUpdated;
+      end;
+
+      if not Assigned(ReadBit1) then
+      begin
+        ReadBit1 := TTagBit.Create(Self);
+        ReadBit1.ConnectToStructItem(MyStructItem)
+               .SetStartBit(1)
+               .SetEndBit(1);
+        ReadBit1.OnValueBool := OnTagBitUpdated2;
+      end;
+
+      TextView1.AppendLn('Conectando...');
+      Driver.Connect;
   end
   else
   begin
-    TextView1.AppendLn('Desconectando...');
-    Driver.Disconnect;
+    // Estado "Desconectar"
+    TextView1.AppendLn('Solicitando desconexão...');
+    if Assigned(Driver) then
+      Driver.Disconnect;
   end;
+end;
+
+procedure TAndroidModule1.EditText3LostFocus(Sender: TObject;
+  textContent: string);
+begin
+  if ReadText.LastSyncReadStatus = ioOk then
+    ReadText.Write(textContent);
+  if ReadText.LastSyncWriteStatus = ioOk then
+    ShowMessage('Texto salvo com sucesso!', TGravity.gvCenter, TShowLength.slLong);
+end;
+
+procedure TAndroidModule1.EditText4LostFocus(Sender: TObject;
+  textContent: string);
+begin
+  if ReadNumber.LastSyncReadStatus = ioOk then
+  begin
+
+    ReadNumber.Write(StrToInt(textContent));
+  end;
+  if ReadNumber.LastSyncWriteStatus = ioOk then
+    ShowMessage('Valor salvo com sucesso!', TGravity.gvCenter, TShowLength.slLong);
 end;
 
 procedure TAndroidModule1.Timer1Timer(Sender: TObject);

@@ -32,6 +32,37 @@ begin
 end;
 
 { Class:     com_br_gp2e_ps4l_Controls
+  Method:    pOnScrollViewChanged
+  Signature: (JIIIIII)V }
+procedure pOnScrollViewChanged(PEnv: PJNIEnv; this: JObject; pasobj: JLong; 
+  currenthorizontal: JInt; currentVertical: JInt; previousHorizontal: JInt; 
+  previousVertical: JInt; onPosition: JInt; scrolldiff: JInt); cdecl;
+begin
+  Java_Event_pOnScrollViewChanged(PEnv, this, TObject(pasobj), 
+    currenthorizontal, currentVertical, previousHorizontal, previousVertical, 
+    onPosition, scrolldiff);
+end;
+
+{ Class:     com_br_gp2e_ps4l_Controls
+  Method:    pOnScrollViewInnerItemClick
+  Signature: (JI)V }
+procedure pOnScrollViewInnerItemClick(PEnv: PJNIEnv; this: JObject; 
+  pasobj: JLong; itemId: JInt); cdecl;
+begin
+  Java_Event_pOnScrollViewInnerItemClick(PEnv, this, TObject(pasobj), itemId);
+end;
+
+{ Class:     com_br_gp2e_ps4l_Controls
+  Method:    pOnScrollViewInnerItemLongClick
+  Signature: (JII)V }
+procedure pOnScrollViewInnerItemLongClick(PEnv: PJNIEnv; this: JObject; 
+  pasobj: JLong; index: JInt; itemId: JInt); cdecl;
+begin
+  Java_Event_pOnScrollViewInnerItemLongClick(PEnv, this, TObject(pasobj), 
+    index, itemId);
+end;
+
+{ Class:     com_br_gp2e_ps4l_Controls
   Method:    pOnChangeSwitchButton
   Signature: (JZ)V }
 procedure pOnChangeSwitchButton(PEnv: PJNIEnv; this: JObject; pasobj: JLong; 
@@ -552,13 +583,22 @@ begin
   Java_Event_pOnRunOnUiThread(PEnv, this, TObject(pasobj), tag);
 end;
 
-const NativeMethods: array[0..60] of JNINativeMethod = (
+const NativeMethods: array[0..63] of JNINativeMethod = (
    (name: 'pEditTextOnActionIconTouchUp';
     signature: '(JLjava/lang/String;)V';
     fnPtr: @pEditTextOnActionIconTouchUp; ),
    (name: 'pEditTextOnActionIconTouchDown';
     signature: '(JLjava/lang/String;)V';
     fnPtr: @pEditTextOnActionIconTouchDown; ),
+   (name: 'pOnScrollViewChanged';
+    signature: '(JIIIIII)V';
+    fnPtr: @pOnScrollViewChanged; ),
+   (name: 'pOnScrollViewInnerItemClick';
+    signature: '(JI)V';
+    fnPtr: @pOnScrollViewInnerItemClick; ),
+   (name: 'pOnScrollViewInnerItemLongClick';
+    signature: '(JII)V';
+    fnPtr: @pOnScrollViewInnerItemLongClick; ),
    (name: 'pOnChangeSwitchButton';
     signature: '(JZ)V';
     fnPtr: @pOnChangeSwitchButton; ),
@@ -810,6 +850,12 @@ exports
     +'pEditTextOnActionIconTouchUp',
   pEditTextOnActionIconTouchDown name 'Java_com_br_gp2e_ps4l_Controls_'
     +'pEditTextOnActionIconTouchDown',
+  pOnScrollViewChanged name 'Java_com_br_gp2e_ps4l_Controls_'
+    +'pOnScrollViewChanged',
+  pOnScrollViewInnerItemClick name 'Java_com_br_gp2e_ps4l_Controls_'
+    +'pOnScrollViewInnerItemClick',
+  pOnScrollViewInnerItemLongClick name 'Java_com_br_gp2e_ps4l_Controls_'
+    +'pOnScrollViewInnerItemLongClick',
   pOnChangeSwitchButton name 'Java_com_br_gp2e_ps4l_Controls_'
     +'pOnChangeSwitchButton',
   pOnTCPSocketClientMessageReceived name 'Java_com_br_gp2e_ps4l_Controls_'

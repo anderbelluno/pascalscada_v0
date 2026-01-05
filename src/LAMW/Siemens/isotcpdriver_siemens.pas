@@ -12,16 +12,20 @@ type
     Handler: TS7FrameReceived;
   end;
 
+  { TISOTCPDriver }
+
   TISOTCPDriver = class(TComponent)
   private
     FPort: TPortTCP;
     FOnFrame: TS7FrameReceived;
     FOnS7Connected: TNotifyEvent;
+    FOnS7Disconnected: TNotifyEvent;
     FFrameListeners: array of TS7FrameReceived;
     FRequestQueue: TList;
     FNextHandler: TS7FrameReceived;
     procedure PortOnFrame(Sender: TObject; const Frame: TBytes);
     procedure SetOnS7Connected(Value: TNotifyEvent);
+    procedure SetOnS7Disconnected(Value: TNotifyEvent);
     function SameListener(a, b: TS7FrameReceived): Boolean;
   public
     constructor Create(AOwner: TComponent; APort: TPortTCP); reintroduce;
@@ -37,6 +41,7 @@ type
     procedure SendPDU(const Data: TBytes; Handler: TS7FrameReceived); overload;
     property OnFrameReceived: TS7FrameReceived read FOnFrame write FOnFrame;
     property OnS7Connected: TNotifyEvent read FOnS7Connected write SetOnS7Connected;
+    property OnS7Disconnected: TNotifyEvent read FOnS7Disconnected write SetOnS7Disconnected;
     function AddFrameListener(L: TS7FrameReceived): TISOTCPDriver;
     function RemoveFrameListener(L: TS7FrameReceived): TISOTCPDriver;
     function SetActiveHandler(L: TS7FrameReceived): TISOTCPDriver;
@@ -91,7 +96,7 @@ end;
 
 function TISOTCPDriver.Connect: TISOTCPDriver;
 begin
-  LogD('PLC', 'Driver.Connect');
+  //LogD('PLC', 'Driver.Connect');
   FPort.Connect;
   Result := Self;
 end;
@@ -116,7 +121,7 @@ end;
 procedure TISOTCPDriver.SendPDU(const Data: TBytes; Handler: TS7FrameReceived);
 var
   FullPDU: TBytes;
-  Len, ParamLen: Integer;
+  Len, ParamLen, DataLen: Integer;
   Item: THandlerItem;
 begin
   if Assigned(Handler) then
@@ -126,9 +131,29 @@ begin
     FRequestQueue.Add(Item);
   end;
 
-  ParamLen := Length(Data);
-  // TPKT(4) + COTP(3) + S7Header(10) + Param
-  Len := 4 + 3 + 10 + ParamLen;
+  // Determine ParamLen and DataLen based on Function Code
+  if (Length(Data) > 0) and ((Data[0] = $05) or (Data[0] = $04)) then
+  begin
+    // Read/Write Var
+    // Data[1] is Item Count
+    // ParamLen = 2 (Func+Count) + 12 * ItemCount
+    if Length(Data) > 1 then
+       ParamLen := 2 + (Data[1] * 12)
+    else
+       ParamLen := Length(Data);
+       
+    if ParamLen > Length(Data) then ParamLen := Length(Data);
+    DataLen := Length(Data) - ParamLen;
+  end
+  else
+  begin
+    // Assume all Param for other functions
+    ParamLen := Length(Data);
+    DataLen := 0;
+  end;
+
+  // TPKT(4) + COTP(3) + S7Header(10) + Param + Data
+  Len := 4 + 3 + 10 + ParamLen + DataLen;
   SetLength(FullPDU, Len);
 
   // TPKT
@@ -151,13 +176,17 @@ begin
   FullPDU[12] := $01; // PDU Ref Lo
   FullPDU[13] := (ParamLen shr 8) and $FF; // Param Length
   FullPDU[14] := ParamLen and $FF;
-  FullPDU[15] := $00; // Data Length Hi (Read requests have 0 data)
-  FullPDU[16] := $00; // Data Length Lo
+  FullPDU[15] := (DataLen shr 8) and $FF; // Data Length Hi
+  FullPDU[16] := DataLen and $FF; // Data Length Lo
 
-  LogD('PLC', 'S7 Header Sent: ParamLen=' + IntToStr(ParamLen));
+ // LogD('PLC', 'S7 Header Sent: ParamLen=' + IntToStr(ParamLen) + ' DataLen=' + IntToStr(DataLen));
 
   // Copy Parameter (Var Spec)
   Move(Data[0], FullPDU[17], ParamLen);
+  
+  // Copy Data
+  if DataLen > 0 then
+    Move(Data[ParamLen], FullPDU[17 + ParamLen], DataLen);
 
   //AppLog('PLC', 'Driver.SendPDU Wrapped ' + IntToStr(Len) + ' bytes');
   FPort.Send(FullPDU);
@@ -193,6 +222,12 @@ procedure TISOTCPDriver.SetOnS7Connected(Value: TNotifyEvent);
 begin
   FOnS7Connected := Value;
   FPort.OnS7Connected := Value;
+end;
+
+procedure TISOTCPDriver.SetOnS7Disconnected(Value: TNotifyEvent);
+begin
+  FOnS7Disconnected := Value;
+  FPort.OnS7Disconnected  := Value;
 end;
 
 function TISOTCPDriver.SameListener(a, b: TS7FrameReceived): Boolean;
