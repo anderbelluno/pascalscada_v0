@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" package="com.br.gp2e.ps4l" android:versionCode="1" android:versionName="1.0">
-  <uses-sdk/>
   <uses-permission android:name="android.permission.ACCESS_BLUETOOTH_SHARE"/>
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
   <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
@@ -45,5 +44,7 @@
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
     </activity>
+<provider android:name="androidx.core.content.FileProvider" android:authorities="com.br.gp2e.ps4l.fileprovider" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/support_provider_paths"/></provider>
+
   </application>
 </manifest>

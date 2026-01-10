@@ -1535,6 +1535,10 @@ public  java.lang.Object jButton_Create(long pasobj ) {
   return (java.lang.Object)( new jButton(this.activity,this,pasobj));
 }
 
+public java.lang.Object jDialogYN_Create(long pasobj, String title, String msg, String y, String n) {
+  return (jDialogYN)(new jDialogYN(activity,this,pasobj,title,msg,y,n) );
+}
+
 public java.lang.Object jEditText_Create(long pasobj ) {
   return (java.lang.Object)( new jEditText(this.activity,this,pasobj));
 }

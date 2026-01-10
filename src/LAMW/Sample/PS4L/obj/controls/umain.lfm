@@ -327,12 +327,12 @@ object AndroidModule1: TAndroidModule1
       Enabled = True
       Left = 10
       Top = 5
-      Width = 409
+      Width = 286
       Height = 45
       Visible = True
       PosRelativeToAnchor = []
-      PosRelativeToParent = [rpTop, rpLeft, rpRight]
-      LayoutParamWidth = lp95PercentOfParent
+      PosRelativeToParent = [rpTop, rpLeft]
+      LayoutParamWidth = lpTwoThirdOfParent
       LayoutParamHeight = lpHalfOfParent
       Text = '123'
       Alignment = taLeft
@@ -353,7 +353,6 @@ object AndroidModule1: TAndroidModule1
       CapSentence = False
       CaptureBackPressed = False
       GravityInParent = lgNone
-      OnLostFocus = EditText3LostFocus
     end
     object EditText4: jEditText
       MarginLeft = 10
@@ -363,12 +362,12 @@ object AndroidModule1: TAndroidModule1
       Enabled = True
       Left = 10
       Top = 41
-      Width = 409
+      Width = 286
       Height = 45
       Visible = True
       PosRelativeToAnchor = []
-      PosRelativeToParent = [rpBottom, rpLeft, rpRight]
-      LayoutParamWidth = lp95PercentOfParent
+      PosRelativeToParent = [rpBottom, rpLeft]
+      LayoutParamWidth = lpTwoThirdOfParent
       LayoutParamHeight = lpHalfOfParent
       Text = '321'
       Alignment = taLeft
@@ -389,7 +388,54 @@ object AndroidModule1: TAndroidModule1
       CapSentence = False
       CaptureBackPressed = False
       GravityInParent = lgNone
-      OnLostFocus = EditText4LostFocus
+    end
+    object Button1: jButton
+      MarginLeft = 5
+      MarginTop = 10
+      MarginRight = 5
+      MarginBottom = 5
+      Enabled = True
+      Left = 311
+      Top = 10
+      Width = 48
+      Height = 45
+      Visible = True
+      Anchor = EditText3
+      PosRelativeToAnchor = [raToRightOf]
+      PosRelativeToParent = [rpTop]
+      LayoutParamWidth = lpWrapContent
+      LayoutParamHeight = lpHalfOfParent
+      Text = 'Ok'
+      BackgroundColor = colbrDefault
+      FontColor = colbrDefault
+      FontSize = 0
+      FontSizeUnit = unitDefault
+      GravityInParent = lgNone
+      OnClick = Button1Click
+    end
+    object Button2: jButton
+      MarginLeft = 5
+      MarginTop = 10
+      MarginRight = 5
+      MarginBottom = 5
+      Enabled = True
+      Left = 311
+      Top = 41
+      Width = 48
+      Height = 45
+      Visible = True
+      Anchor = EditText3
+      PosRelativeToAnchor = [raToRightOf]
+      PosRelativeToParent = [rpBottom]
+      LayoutParamWidth = lpWrapContent
+      LayoutParamHeight = lpHalfOfParent
+      Text = 'Ok'
+      BackgroundColor = colbrDefault
+      FontColor = colbrDefault
+      FontSize = 0
+      FontSizeUnit = unitDefault
+      GravityInParent = lgNone
+      OnClick = Button2Click
     end
   end
   object Timer1: jTimer
@@ -402,5 +448,14 @@ object AndroidModule1: TAndroidModule1
   object TCPSocketClient1: jTCPSocketClient
     Left = 392
     Top = 16
+  end
+  object DialogYN: jDialogYN
+    Title = 'jDialogYesNo'
+    Msg = 'Accept ?'
+    Yes = 'Yes'
+    No = 'No'
+    TitleAlign = alLeft
+    Left = 304
+    Top = 192
   end
 end

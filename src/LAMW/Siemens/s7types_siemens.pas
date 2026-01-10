@@ -84,10 +84,21 @@ type
     ioNullTagBlock
   );
 
+  TProtocolIOResultHelper = record helper for TProtocolIOResult
+    function ToString: string;
+  end;
+
 function S7AreaCode(Area: TS7Area): Byte;
 function S7TransportSizeCode(Size: TS7TransportSize): Byte;
 
 implementation
+
+uses TypInfo;
+
+function TProtocolIOResultHelper.ToString: string;
+begin
+  Result := GetEnumName(TypeInfo(TProtocolIOResult), Ord(Self));
+end;
 
 function S7AreaCode(Area: TS7Area): Byte;
 begin

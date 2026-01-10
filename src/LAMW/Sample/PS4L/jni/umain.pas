@@ -13,8 +13,13 @@ type
 
   { TAndroidModule1 }
 
+  TPendingWriteOp = (pwoNone, pwoWriteText, pwoWriteNumber);
+
   TAndroidModule1 = class(jForm)
     btnConnect: jButton;
+    Button1: jButton;
+    Button2: jButton;
+    DialogYN: jDialogYN;
     EditText1: jEditText;
     EditText2: jEditText;
     EditText3: jEditText;
@@ -33,8 +38,8 @@ type
     procedure AndroidModule1Destroy(Sender: TObject);
     procedure AndroidModule1JNIPrompt(Sender: TObject);
     procedure btnConnectClick(Sender: TObject);
-    procedure EditText3LostFocus(Sender: TObject; textContent: string);
-    procedure EditText4LostFocus(Sender: TObject; textContent: string);
+    procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
     procedure OnS7Connected(Sender: TObject);
     procedure onS7Disconneted(Sender: TObject);
     procedure OnStringUpdated(Sender: TObject; const ValueText: string);
@@ -45,6 +50,8 @@ type
     procedure SwitchButton1Toggle(Sender: TObject; isStateOn: boolean);
     procedure SwitchButton2Toggle(Sender: TObject; isStateOn: boolean);
     procedure Timer1Timer(Sender: TObject);
+    procedure OnWriteNumberComplete(Sender: TObject; Status: TProtocolIOResult);
+    procedure OnWriteTextComplete(Sender: TObject; Status: TProtocolIOResult);
   private
     // PT: Gerenciador de conexão TCP de baixo nível
     // EN: Low-level TCP connection manager
@@ -77,6 +84,12 @@ type
     
     FS7Ready: Boolean;
     PiscaPisca: Integer;
+
+    FPendingWriteOp: TPendingWriteOp;
+    FPendingText: string;
+    FPendingNumberText: string;
+
+    procedure OnConfirmDialogClick(Sender: TObject; YN: TClickYN);
   end;
 
 var
@@ -87,6 +100,41 @@ implementation
 {$R *.lfm}
 
 { TAndroidModule1 }
+
+procedure TAndroidModule1.OnConfirmDialogClick(Sender: TObject; YN: TClickYN);
+var
+  ValueInt: Integer;
+begin
+  if YN <> ClickYes then
+  begin
+    FPendingWriteOp := pwoNone;
+    Exit;
+  end;
+
+  case FPendingWriteOp of
+    pwoWriteText:
+      begin
+        if Assigned(ReadText) then
+        begin
+          ShowMessage('Escrevendo... aguardando ioOk', TGravity.gvCenter, TShowLength.slShort);
+          ReadText.Write(FPendingText);
+        end;
+      end;
+    pwoWriteNumber:
+      begin
+        if not Assigned(ReadNumber) then Exit;
+        if not TryStrToInt(FPendingNumberText, ValueInt) then
+        begin
+          ShowMessage('Valor inválido: ' + FPendingNumberText, TGravity.gvCenter, TShowLength.slShort);
+          Exit;
+        end;
+        ShowMessage('Escrevendo... aguardando ioOk', TGravity.gvCenter, TShowLength.slShort);
+        ReadNumber.Write(ValueInt);
+      end;
+  end;
+
+  FPendingWriteOp := pwoNone;
+end;
 
 procedure TAndroidModule1.OnS7Connected(Sender: TObject);
 begin
@@ -217,6 +265,11 @@ end;
 
 procedure TAndroidModule1.AndroidModule1JNIPrompt(Sender: TObject);
 begin
+  // Garante que o evento esteja conectado, caso não esteja no LFM
+  if Assigned(DialogYN) then
+    DialogYN.OnClickYN := OnConfirmDialogClick;
+
+  FPendingWriteOp := pwoNone;
   FS7Ready := False;
  // TextView1.AppendLn('OnJNIPrompt');
   TextView1.SetVerticalScrollBarEnabled(True);
@@ -272,6 +325,7 @@ begin
                   .SetMemAddress(2)       // Offset 2
                   .SetKind(pttSmallInt);  // Equivalente ao PascalSCADA para Int
         ReadNumber.OnValueChange := OnNumberUpdated;
+        ReadNumber.OnWriteComplete := OnWriteNumberComplete;
       end;
       ReadNumber.Connection(Driver);
 
@@ -283,6 +337,7 @@ begin
                  .SetMemReadFunction(4)
                  .SetDB(1, 4, 52);
         ReadText.OnValueChange := OnStringUpdated;
+        ReadText.OnWriteComplete := OnWriteTextComplete;
       end;
       ReadText.Connection(Driver);
 
@@ -334,25 +389,62 @@ begin
   end;
 end;
 
-procedure TAndroidModule1.EditText3LostFocus(Sender: TObject;
-  textContent: string);
+procedure TAndroidModule1.Button1Click(Sender: TObject);
 begin
+
+  LogD('Buttom1','Click Buttom1');
+  if not Assigned(ReadText) then
+  begin
+     LogD('Buttom1','ReadText not assigned');
+    ShowMessage('Tag ReadText não inicializada.', TGravity.gvCenter, TShowLength.slShort);
+    Exit;
+  end;
+
   if ReadText.LastSyncReadStatus = ioOk then
-    ReadText.Write(textContent);
-  if ReadText.LastSyncWriteStatus = ioOk then
-    ShowMessage('Texto salvo com sucesso!', TGravity.gvCenter, TShowLength.slLong);
+  begin
+    LogD('Buttom1',ReadText.LastSyncReadStatus.ToString);
+    FPendingWriteOp := pwoWriteText;
+    FPendingText := EditText3.Text;
+    DialogYN.Show('Confirmação', 'Deseja escrever o texto: "' + FPendingText + '"?', 'Sim', 'Não');
+  end
+  else
+    ShowMessage('Tag não está pronta para escrita. Status: ' + ReadText.LastSyncReadStatus.ToString, TGravity.gvCenter, TShowLength.slShort);
 end;
 
-procedure TAndroidModule1.EditText4LostFocus(Sender: TObject;
-  textContent: string);
+procedure TAndroidModule1.Button2Click(Sender: TObject);
 begin
+  if not Assigned(ReadNumber) then
+  begin
+    ShowMessage('Tag ReadNumber não inicializada.', TGravity.gvCenter, TShowLength.slShort);
+    Exit;
+  end;
+
   if ReadNumber.LastSyncReadStatus = ioOk then
   begin
+    FPendingWriteOp := pwoWriteNumber;
+    FPendingNumberText := EditText4.Text;
+    DialogYN.Show('Confirmação', 'Deseja escrever o valor: ' + FPendingNumberText + ' ?', 'Sim', 'Não');
+  end
+  else
+    ShowMessage('Tag não está pronta para escrita. Status: ' + ReadNumber.LastSyncReadStatus.ToString, TGravity.gvCenter, TShowLength.slShort);
+end;
 
-    ReadNumber.Write(StrToInt(textContent));
-  end;
-  if ReadNumber.LastSyncWriteStatus = ioOk then
-    ShowMessage('Valor salvo com sucesso!', TGravity.gvCenter, TShowLength.slLong);
+procedure TAndroidModule1.OnWriteNumberComplete(Sender: TObject; Status: TProtocolIOResult);
+begin
+  LogD('ReadNumber - OnWriteComplete', Status.ToString);
+  if Status = ioOk then
+    ShowMessage('Valor salvo com sucesso (Async)!', TGravity.gvCenter, TShowLength.slLong)
+  else
+    ShowMessage('Erro ao salvar valor: ' + Status.ToString, TGravity.gvCenter, TShowLength.slLong);
+end;
+
+procedure TAndroidModule1.OnWriteTextComplete(Sender: TObject; Status: TProtocolIOResult);
+begin
+  LogD('ReadText - OnWriteComplete', Status.ToString);
+  if Status = ioOk then
+    ShowMessage('Texto salvo com sucesso (Async)!', TGravity.gvCenter, TShowLength.slLong)
+  else
+    ShowMessage('Erro ao salvar texto: ' + Status.ToString, TGravity.gvCenter, TShowLength.slLong);
 end;
 
 procedure TAndroidModule1.Timer1Timer(Sender: TObject);

@@ -22,6 +22,8 @@ type
   TOnValueDInt  = procedure(Sender: TObject; Value: LongInt) of object;
   TOnValueReal  = procedure(Sender: TObject; Value: Single) of object;
 
+  TOnWriteComplete = procedure(Sender: TObject; Status: TProtocolIOResult) of object;
+
   // PT: Classe base para tags numéricos do PLC
   // EN: Base class for numeric PLC tags
   TPLCTagNumber = class(TComponent)
@@ -42,6 +44,7 @@ type
     FOnValueDInt:  TOnValueDInt;
     FOnValueReal:  TOnValueReal;
     FOnValueChange: TOnValueChange;
+    FOnWriteComplete: TOnWriteComplete;
     FScanInterval: Integer;
     FTimer: jTimer;
     FSwapBytes: Boolean;
@@ -140,6 +143,7 @@ type
     property OnValueDInt:  TOnValueDInt  read FOnValueDInt  write FOnValueDInt;
     property OnValueReal:  TOnValueReal  read FOnValueReal  write FOnValueReal;
     property OnValueChange: TOnValueChange read FOnValueChange write FOnValueChange;
+    property OnWriteComplete: TOnWriteComplete read FOnWriteComplete write FOnWriteComplete;
     property ScanInterval: Integer read GetScanInterval write SetScanIntervalProp;
     property AutoRead: Boolean read FAutoRead write SetAutoReadProp;
     property SwapBytes: Boolean read FSwapBytes write FSwapBytes;
@@ -710,6 +714,9 @@ begin
     FLastSyncWriteStatus := ioOk
   else
     FLastSyncWriteStatus := ioCommError;
+
+  if Assigned(FOnWriteComplete) then
+    FOnWriteComplete(Self, FLastSyncWriteStatus);
 end;
 
 procedure TPLCTagNumber.Read;

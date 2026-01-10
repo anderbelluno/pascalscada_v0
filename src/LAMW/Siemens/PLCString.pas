@@ -10,6 +10,7 @@ uses
 
 type
   TOnValue = procedure(Sender: TObject; const ValueText: string) of object;
+  TOnWriteComplete = procedure(Sender: TObject; Status: TProtocolIOResult) of object;
 
   TPLCString = class(TComponent)
   private
@@ -19,6 +20,7 @@ type
     FOffset: LongWord;
     FSize: Word;
     FOnValueChange: TOnValue;
+    FOnWriteComplete: TOnWriteComplete;
     FScanInterval: Integer;
     FTimer: jTimer;
     FMemReadFunction: Integer;
@@ -54,6 +56,7 @@ type
     procedure Write(const Value: string);
     
     property OnValueChange: TOnValue  read FOnValueChange write FOnValueChange;
+    property OnWriteComplete: TOnWriteComplete read FOnWriteComplete write FOnWriteComplete;
     property ScanInterval: Integer read GetScanInterval write FScanInterval;
     property AutoRead: Boolean read FAutoRead write FAutoRead;
     
@@ -272,6 +275,9 @@ begin
     FLastSyncWriteStatus := ioOk
   else
     FLastSyncWriteStatus := ioCommError;
+
+  if Assigned(FOnWriteComplete) then
+    FOnWriteComplete(Self, FLastSyncWriteStatus);
 end;
 
 procedure TPLCString.DriverOnFrame(Sender: TObject; const Frame: TBytes);
